@@ -8,10 +8,12 @@ BS_PRED_DIRS = [
     DATA_DIR / "results/binding_sites/prediction.tsv"
 ] + [
     DATA_DIR / f"results/binding_sites/prediction_{i}.tsv"
-    for i in range(2, 7)
+    for i in range(2, 8)
 ]
+CAT_PRED_DF = DATA_DIR / "results/catalytic_sites/cat_sites.csv"
 SEQ_LOOKUP   = DATA_DIR / "results/sequence_id_to_sequence.pkl"
 
+# ---- Prot representation configs ----
 EMB_COMBOS = {
     "ESMC":               dict(use_t5=False, use_esmc=True,  use_esm2=False),
     "T5":                 dict(use_t5=True,  use_esmc=False, use_esm2=False),
@@ -25,7 +27,7 @@ EMB_COMBOS = {
 REP_MODES = {
     "global":        dict(prot_rep_mode="global"),
     "binding":       dict(prot_rep_mode="binding"),
-    "both":          dict(prot_rep_mode="both"),
+    "binding+global": dict(prot_rep_mode="binding+global"),
 }
 
 CONFIGS = []
@@ -34,9 +36,9 @@ for emb_name, emb_flags in EMB_COMBOS.items():
         name = f"{emb_name}|{rep_name}"
         CONFIGS.append(dict(name=name, **emb_flags, **rep_flags))
 
-# config.py or main_pca.py (before main)
-
+# ---- PCA configs ----
 PCA_VALUES = [100, 200, 300, 400, 500, 750, 1000, 1750, None]  # None = no PCA
+# PCA_VALUES = [10, None]  
 
 CONFIGS_PCA = []
 
@@ -56,10 +58,11 @@ for emb_name, emb_flags in {
             name=label,
             use_pca=use_pca,
             n_comps=n_comps,
-            prot_rep_mode="both",
+            prot_rep_mode="binding+global",
             **emb_flags
         ))
 
+# ---- SMILES representations ----
 SMILES_REPS = ['smiles_transformer', 'MFP', 'UniMol', 'FARM', 'molformer',
         'TopologicalTorsion', 'MinHash', 'MACCS', 'AtomPair', 'Avalon']
 
@@ -86,26 +89,30 @@ CONFIGS_SMILES_KM = [
     )
     for method in SMILES_REPS
 ]
-
+# ---- Configs for KinForm-L and KinForm-H ----
 CONFIG_L = dict(
     name="KinForm-L",
     use_pca=True,
     n_comps=300,
-    prot_rep_mode="both",
+    prot_rep_mode="binding+global",
     use_esmc=True,
     use_esm2=True,
     use_t5=True,
     t5_last_layer=True,
+    et_params=dict(
+        n_estimators=100,)
 )
 CONFIG_H = dict(
     name="KinForm-H",
     use_pca=False,
     n_comps=None,
-    prot_rep_mode="both",
+    prot_rep_mode="binding+global",
     use_esmc=True,
     use_esm2=True,
     use_t5=True,
     t5_last_layer=True,
+    et_params=dict(
+        n_estimators=100)
 )
 CONFIG_UniKP = dict(
     name="UniKP",

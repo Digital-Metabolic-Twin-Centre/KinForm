@@ -19,7 +19,10 @@ import torch
 from sklearn.model_selection import GroupKFold, KFold
 from tqdm import tqdm
 import joblib
+import scipy.sparse as sp
 # local imports ------------------------------------------------------ #
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
 from config import SEQ_LOOKUP, BS_PRED_DIRS, CONFIG_L, CONFIG_H, CONFIG_UniKP
 from utils.smiles_features import smiles_to_vec
@@ -56,8 +59,8 @@ raw_to_pos = {raw_i: pos for pos, raw_i in enumerate(orig_idx)}
 # fixed split indices
 train_pairs = torch.load(TRAIN_PAIRS)
 test_pairs  = torch.load(TEST_PAIRS)
-pre_tr = np.array([raw_to_pos[p[3][0]] for p in train_pairs],int)
-pre_te = np.array([raw_to_pos[p[3][0]] for p in test_pairs],int)
+pre_tr = np.array([raw_to_pos[p[3][0]] for p in train_pairs], int)
+pre_te = np.array([raw_to_pos[p[3][0]] for p in test_pairs], int)
 
 # groups for GroupKFold
 lookup = pd.read_pickle(SEQ_LOOKUP)
@@ -74,9 +77,12 @@ results_all: Dict[str, Dict[str, List[Dict]]] = {}
 for cfg in CONFIGS:
     name = cfg["name"]
     blocks_all, names = sequences_to_feature_blocks(
-        seqs,
-        bs_df,
-        seq_to_id,
+        sequence_list=seqs,
+        binding_site_df=bs_df,
+        cat_sites_df=None,
+        ec_num_df= None,
+        seq_to_id=seq_to_id,
+        use_ec_logits=False,
         use_esmc=cfg["use_esmc"],
         use_esm2=cfg["use_esm2"],
         use_t5=cfg["use_t5"],
@@ -90,8 +96,8 @@ for cfg in CONFIGS:
     # fixed split ------------------------------------------------------
     X_tr, X_te = make_design_matrices(pre_tr, pre_te, blocks_all, names, cfg, smiles_vec)
     y_tr, y_te = y_np[pre_tr], y_np[pre_te]
-
-    _, y_pred, m = train_model(X_tr, y_tr, X_te, y_te,fold=42) #fold is set for reproducibility
+    et_params = cfg.get("et_params", None)
+    _, y_pred, m = train_model(X_tr, y_tr, X_te, y_te,fold=42, et_params=et_params)
     cfg_res["fixed"] = [
         dict(
             split="fixed",
@@ -107,7 +113,7 @@ for cfg in CONFIGS:
     ]
 
     # cross-validation -------------------------------------------------
-    for mode in ("kfold", "groupkfold"):
+    for mode in ("groupkfold","kfold"):
         if mode == "kfold":
             fold_idx = KFold(5, shuffle=True, random_state=SEED).split(seqs)
         else:
@@ -124,11 +130,18 @@ for cfg in CONFIGS:
             # baseline
             X_tr, X_te = make_design_matrices(tr, te, blocks_all, names, cfg, smiles_vec)
             y_tr, y_te = y_np[tr], y_np[te]
-            model, yp, m1 = train_model(X_tr, y_tr, X_te, y_te, fold=fold_no)
+            model, yp, m1 = train_model(X_tr, y_tr, X_te, y_te, fold=fold_no, et_params=et_params)
 
             model_out_dir = OUT_DIR / "ETmodels" / "eitlem_dataset" / name / f"fold{fold_no}"
             model_out_dir.mkdir(parents=True, exist_ok=True)
             joblib.dump(model, model_out_dir / "model.joblib")
+            # instead of print
+            pbar.set_postfix({
+                "config": name,
+                "fold": fold_no,
+                "r2": f"{m1['r2']:.4f}",
+                "rmse": f"{m1['rmse']:.4f}",
+            })
             folds_out.append(
                 dict(
                     split=mode,

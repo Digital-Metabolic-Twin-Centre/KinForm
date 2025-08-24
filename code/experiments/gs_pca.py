@@ -5,15 +5,17 @@ import numpy as np
 import pandas as pd
 import math
 from tqdm import tqdm
-
-from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CONFIGS_PCA
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
+from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CONFIGS_PCA,CAT_PRED_DF
+import ast
 from model_training import train_model
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab 
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks 
 from utils.pca import (
-    scale_and_reduce_blocks,
-    split_blocks
+    make_design_matrices
 )
 from utils.folds import get_folds
     
@@ -49,7 +51,9 @@ def main(dataset):
 
     bs_dfs = [pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS]
     binding_site_df = pd.concat(bs_dfs, ignore_index=True)
-
+    # cat_df = pd.read_csv(CAT_PRED_DF)
+    # cat_df['all_AS_probs'] = cat_df['all_AS_probs'].apply(ast.literal_eval)
+    cat_df = None
     print("Extracting SMILES vectors ...")
     smiles_vec = smiles_to_vec(smiles)
 
@@ -64,9 +68,12 @@ def main(dataset):
             progress_bar.set_description(f"[{split_mode}] Config: {cfg['name']}")
 
             blocks_all, block_names = sequences_to_feature_blocks(
-                sequences,
-                binding_site_df,
-                seq_to_id,
+                sequence_list=sequences,
+                binding_site_df=binding_site_df,
+                ec_num_df=None,
+                cat_sites_df=cat_df,
+                seq_to_id=seq_to_id,
+                use_ec_logits=False,
                 use_esmc=cfg["use_esmc"],
                 use_esm2=cfg["use_esm2"],
                 use_t5=cfg["use_t5"],
@@ -79,31 +86,10 @@ def main(dataset):
             results = []
             for fold, (train_idx, test_idx) in enumerate(fold_indices, 1):
                 progress_bar.update(1)
-                blocks_train = [b[train_idx] for b in blocks_all]
-                blocks_test  = [b[test_idx] for b in blocks_all]
-
-                if cfg["use_pca"]:
-                    progress_bar.set_description(f"[{split_mode}] Config: {cfg['name']} - Reducing blocks")
-                    seq_train, seq_test = scale_and_reduce_blocks(
-                        blocks_train=blocks_train,
-                        blocks_test=blocks_test,
-                        block_names=block_names,
-                        n_comps=cfg["n_comps"]
-                    )
-                else:
-                    b_tr, g_tr = split_blocks(block_names, blocks_train)
-                    b_te, g_te = split_blocks(block_names, blocks_test)
-
-                    seq_train = np.concatenate(b_tr + g_tr, axis=1)
-                    seq_test  = np.concatenate(b_te + g_te, axis=1)
-
-                smi_train, smi_test = smiles_vec[train_idx], smiles_vec[test_idx]
+                X_tr, X_te = make_design_matrices(train_idx, test_idx, blocks_all, block_names, cfg, smiles_vec)
                 y_train, y_test = labels_np[train_idx], labels_np[test_idx]
-
-                X_train = np.concatenate([smi_train, seq_train], axis=1)
-                X_test  = np.concatenate([smi_test,  seq_test],  axis=1)
                 progress_bar.set_description(f"[{split_mode}] Config: {cfg['name']} - Fitting model")
-                _, _, metrics = train_model(X_train, y_train, X_test, y_test, fold=fold)
+                _, _, metrics = train_model(X_tr, y_train, X_te, y_test, fold=fold)
                 progress_bar.set_postfix(fold=fold, r2=metrics["r2"])
 
                 results.append(dict(
@@ -125,7 +111,6 @@ def main(dataset):
     df.to_csv(f"/home/msp/saleh/KinForm/results/pca_gs_{dataset}.csv", index=False)
     # Save full results dict as pickle
     pd.to_pickle(all_results, f"/home/msp/saleh/KinForm/results/pca_gs_{dataset}.pkl")
-
 
 if __name__ == "__main__":
     main('dlkcat')  

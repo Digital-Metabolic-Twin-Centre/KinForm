@@ -24,7 +24,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupKFold, KFold
 from tqdm import tqdm
-
+import ast
+import scipy.sparse as sp
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
 # ────────────────────────── local modules ─────────────────────────── #
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
@@ -32,7 +33,8 @@ from config import (                                               # type: ignor
     RAW_DLKCAT,
     SEQ_LOOKUP,
     BS_PRED_DIRS,
-    CONFIG_L,CONFIG_H, CONFIG_UniKP,
+    CAT_PRED_DF,
+    CONFIG_L,CONFIG_H, CONFIG_UniKP
 )
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
@@ -42,8 +44,6 @@ from utils.oversampling import (
     oversample_similarity_balanced_indices,
     oversample_kcat_balanced_indices,
 )
-from model_training import train_model
-
 # ─────────────────────── global constants ─────────────────────────── #
 SEED = 42
 random.seed(SEED)
@@ -51,19 +51,20 @@ np.random.seed(SEED)
 
 CONFIGS = [CONFIG_L, CONFIG_H, CONFIG_UniKP]
 
-
 # output ------------------------------------------------------------- #
 OUT_DIR = Path("/home/msp/saleh/KinForm/results")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_PKL = OUT_DIR / "unikp_kineform_dlkcat_data.pkl"
-
+CONFIG_PARAM_KEYS = ["name", "use_pca", "n_comps", "prot_rep_mode", 
+                      "use_esmc", "use_esm2", "use_t5", "t5_last_layer",
+                        "model_type"]
 # ───────────────────────────────── main ───────────────────────────── #
 def main():
     # 1. load raw --------------------------------------------------------
     raw = [
         d
         for d in json.loads(RAW_DLKCAT.read_text())
-        if len(d["Sequence"]) <= 1_499 and float(d["Value"]) > 0 and "." not in d["Smiles"]
+        if len(d["Sequence"]) <= 1499 and float(d["Value"]) > 0 and "." not in d["Smiles"]
     ]
     sequences = [d["Sequence"] for d in raw]
     raw_smiles = [d["Smiles"] for d in raw]
@@ -79,7 +80,9 @@ def main():
     # binding-site predictions (pre-computed)
     bs_df = pd.concat([pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS], ignore_index=True)
     smiles_vec = smiles_to_vec(raw_smiles, method="smiles_transformer")
-
+    # cat_df = pd.read_csv(CAT_PRED_DF)
+    # cat_df['all_AS_probs'] = cat_df['all_AS_probs'].apply(ast.literal_eval)
+    cat_df = None  
     results_all: Dict[str, List[Dict]] = {}
     fold_splits: Dict[str, List[Dict]] = {}
 
@@ -102,9 +105,12 @@ def main():
 
             # expensive: build sequence blocks once per CFG
             blocks_all, block_names = sequences_to_feature_blocks(
-                sequences,
-                bs_df,
-                seq_to_id,
+                sequence_list=sequences,
+                binding_site_df=bs_df,
+                ec_num_df=None,
+                cat_sites_df=cat_df,
+                seq_to_id=seq_to_id,
+                use_ec_logits=None,
                 use_esmc=cfg["use_esmc"],
                 use_esm2=cfg["use_esm2"],
                 use_t5=cfg["use_t5"],
@@ -112,16 +118,18 @@ def main():
                 t5_last_layer=cfg["t5_last_layer"],
                 task="kcat",
             )
-
             for fold_no, (tr_idx, te_idx) in enumerate(cv, 1):
                 pbar.update(1)
                 tr_idx = np.asarray(tr_idx, int)
                 te_idx = np.asarray(te_idx, int)
 
                 X_tr, X_te = make_design_matrices(tr_idx, te_idx, blocks_all, block_names, cfg, smiles_vec)
-                y_tr, y_te = y_full[tr_idx], y_full[te_idx]
 
-                model, y_pred, m = train_model(X_tr, y_tr, X_te, y_te, fold=fold_no)
+                y_tr, y_te = y_full[tr_idx], y_full[te_idx]
+                et_params = cfg.get("et_params", None)
+                model, y_pred, m = train_model(
+                    X_tr, y_tr, X_te, y_te, fold=fold_no, et_params=et_params
+                )
                 model_out_dir = OUT_DIR / "ETmodels" / "dlkcat_dataset" / cfg_name / f"fold{fold_no}"
                 model_out_dir.mkdir(parents=True, exist_ok=True)
                 joblib.dump(model, model_out_dir / "model.joblib")
@@ -138,6 +146,12 @@ def main():
                     test_idx=te_idx.tolist(),
                 )
                 results_all.setdefault(cfg_name, []).append(base_rec)
+                pbar.set_postfix(
+                    {
+                        "fold": fold_no,
+                        "r2": f"{m['r2']:.3f}",
+                    }
+                )
 
                 if cfg_name.startswith("KinForm-L"):
                     tr_bal = oversample_similarity_balanced_indices(tr_idx, sequences)
@@ -159,7 +173,7 @@ def main():
                             "y_pred": y_pred_bal.tolist(),
                             "train_idx": tr_bal.tolist(),
                         }
-                    )
+                    ) 
     pd.to_pickle(results_all, OUT_PKL)
     print("\n✓ Results written to:", OUT_PKL)
 

@@ -36,8 +36,13 @@ from model_training import train_model
 ROOT = Path("/home/msp/saleh/KinForm")
 DATA_KCAT = ROOT / "data/EITLEM_data/KCAT/kcat_data.json"
 DATA_KM   = ROOT / "data/KM_data_raw.json"
-SEQ_LOOKUP = ROOT / "data/SEQ_LOOKUP.pkl"         
-BS_PRED_DIRS = ROOT.glob("binding_site_preds/*.tsv")
+SEQ_LOOKUP   = ROOT / "results/sequence_id_to_sequence.pkl"
+BS_PRED_DIRS = [
+    ROOT / "results/binding_sites/prediction.tsv"
+] + [
+    ROOT / f"results/binding_sites/prediction_{i}.tsv"
+    for i in range(2, 8)
+]
 
 # ------------------------------------------------------------------- #
 CONFIG_MAP = {
@@ -50,6 +55,7 @@ CONFIG_MAP = {
 # ═════════════════════════ data loading ════════════════════════════ #
 def load_kcat() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return sequences, smiles and log10(kcat) as numpy arrays."""
+    print("Loading kcat data...")
     with DATA_KCAT.open() as fp:
         raw = json.load(fp)
     good = [(r["sequence"], r["smiles"], float(r["value"]))
@@ -189,8 +195,22 @@ def train(task: str, cfg_name: str, model_dir: Path) -> None:
     cfg = CONFIG_MAP[cfg_name]
 
     seqs, smis, y = get_dataset(task)
+    print(f"✓ Loaded {len(seqs)} {task} samples with sequences and SMILES.")
     X, pipe = build_design_matrix(seqs, smis, cfg, fit_pipeline=True, pipeline=None, task=task)
-
+    print(f"✓ Built design matrix with shape {X.shape}.")
+    if cfg_name == "KinForm-L" and task == "kcat":
+        from utils.oversampling import (
+            oversample_similarity_balanced_indices,
+            oversample_kcat_balanced_indices,
+        )
+        print("↪ Performing similarity-based oversampling...")
+        indices = np.arange(len(seqs))
+        indices = oversample_similarity_balanced_indices(indices, seqs)
+        print(f"  ↪ After similarity oversampling: {len(indices)} samples")
+        indices = oversample_kcat_balanced_indices(indices, y)
+        print(f"  ↪ After kcat oversampling: {len(indices)} samples")
+        X = X[indices]
+        y = y[indices]
     model, _, metrics = train_model(X, y, X, y, fold=0)
     print(f"✓ Training finished – R² on full data: {metrics['r2']:.3f}")
 

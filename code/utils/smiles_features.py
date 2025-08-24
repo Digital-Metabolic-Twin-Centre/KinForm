@@ -197,3 +197,15 @@ def smiles_to_vec(Smiles, method='smiles_transformer'):
     if method not in method_to_func:
         raise ValueError(f"Unknown method: {method}. Available methods: {list(method_to_func.keys())}")
     return method_to_func[method](Smiles)
+
+if __name__ == "__main__":
+    # Example usage
+    smiles_list = ["CCO"]
+    methods = [
+        'MFP', 'UniMol', 'FARM', 'molformer', 'smiles_transformer',
+        'TopologicalTorsion', 'MinHash', 'MACCS', 'AtomPair', 'Avalon',
+    ]
+    for method in methods:
+        vec = smiles_to_vec(smiles_list, method=method)[0]
+        print(f"{method} vector for {smiles_list[0]}: {vec.shape}")
+    raise

@@ -4,59 +4,111 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from typing import List, Tuple
 
-def split_blocks(names: List[str], blocks: List[np.ndarray]) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+CANONICAL_ORDER = ("binding", "cat", "ec", "global")
+
+def reorder_blocks(block_names: List[str],
+                   blocks: List[np.ndarray]) -> List[np.ndarray]:
     """
-    Splits feature blocks into (binding_blocks, global_blocks) using block names.
+    Return `blocks` reordered so that all blocks whose *name* contains
+    'binding' come first (original internal order preserved),
+    followed by 'cat', then 'ec', and finally 'global'.
+
+    Parameters
+    ----------
+    block_names : List[str]
+        Names returned by `sequences_to_feature_blocks`
+        (e.g. ["T5_binding", "ESMC_cat", ...]).
+    blocks : List[np.ndarray]
+        Feature-block arrays in the same order as `block_names`.
+
+    Returns
+    -------
+    List[np.ndarray]
+        The reordered list of blocks.
     """
-    binding_blocks, global_blocks = [], []
-    for name, b in zip(names, blocks):
-        if "binding" in name:
-            binding_blocks.append(b)
-        elif "global" in name:
-            global_blocks.append(b)
-    return binding_blocks, global_blocks
+    ordered = []
+    for tag in CANONICAL_ORDER:
+        for nm, blk in zip(block_names, blocks):
+            if tag in nm.lower():
+                ordered.append(blk)
+    return ordered
+
+def group_blocks(names: List[str],
+                 blocks: List[np.ndarray]):
+    """
+    Groups feature blocks by their semantic tag.
+
+    Returns a dict whose keys are one (or more) of
+        'binding', 'cat', 'ec', 'global'
+    and whose values are lists of np.ndarrays in their original order.
+    """
+    groups = {}
+    tag_map = {
+        "binding": "binding",
+        "cat":     "cat",
+        "ec":      "ec",
+        "global":  "global",
+    }
+    for name, block in zip(names, blocks):
+        lname = name.lower()
+        for tag, key in tag_map.items():
+            if tag in lname:
+                groups.setdefault(key, []).append(block)
+                break
+    return groups
+
+def _robust_scale_per_block(train_blocks, test_blocks):
+    tr_scaled, te_scaled = [], []
+    for b_tr, b_te in zip(train_blocks, test_blocks):
+        scaler = RobustScaler().fit(b_tr)
+        tr_scaled.append(scaler.transform(b_tr))
+        te_scaled.append(scaler.transform(b_te))
+    return np.concatenate(tr_scaled, axis=1), np.concatenate(te_scaled, axis=1)
 
 def scale_and_reduce_blocks(
     blocks_train: List[np.ndarray],
-    blocks_test: List[np.ndarray],
-    block_names: List[str],
+    blocks_test:  List[np.ndarray],
+    block_names:  List[str],
     n_comps: int
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Apply RobustScaler + PCA per group (global/binding) if PCA is enabled.
-    Returns transformed features: concat(PCA(global), PCA(binding))
+    For every representation family (`binding`, `cat`, `ec`, `global`)
+    run:
+
+        RobustScaler (per block) → concat →
+        StandardScaler          → PCA(n_comps)
+
+    The final design matrices are the left-to-right concatenation
+    of the *transformed* groups in the fixed order
+        binding → cat → ec → global
+    (groups that are not present are silently skipped).
     """
-    def scale_blocks(train_blocks, test_blocks):
-        train_scaled, test_scaled = [], []
-        for b_tr, b_te in zip(train_blocks, test_blocks):
-            scaler = RobustScaler().fit(b_tr)
-            train_scaled.append(scaler.transform(b_tr))
-            test_scaled.append(scaler.transform(b_te))
-        return np.concatenate(train_scaled, axis=1), np.concatenate(test_scaled, axis=1)
 
-    binding_train, global_train = split_blocks(block_names, blocks_train)
-    binding_test,  global_test  = split_blocks(block_names, blocks_test)
+    train_groups = group_blocks(block_names, blocks_train)
+    test_groups  = group_blocks(block_names, blocks_test)
 
-    Xg_train, Xg_test = scale_blocks(global_train, global_test)
-    Xb_train, Xb_test = scale_blocks(binding_train, binding_test)
-    
-    Xg_scaler = StandardScaler().fit(Xg_train)
-    Xg_train = Xg_scaler.transform(Xg_train)
-    Xg_test  = Xg_scaler.transform(Xg_test)
+    X_tr_parts, X_te_parts = [], []
 
-    Xb_scaler = StandardScaler().fit(Xb_train)
-    Xb_train = Xb_scaler.transform(Xb_train)
-    Xb_test  = Xb_scaler.transform(Xb_test)
+    for grp in CANONICAL_ORDER:
+        if grp not in train_groups:
+            continue
 
-    pca_g = PCA(n_components=n_comps, random_state=42).fit(Xg_train)
-    pca_b = PCA(n_components=n_comps, random_state=42).fit(Xb_train)
+        # 1️⃣ Robust-scale each individual block
+        X_tr_grp, X_te_grp = _robust_scale_per_block(
+            train_groups[grp], test_groups[grp])
 
-    Xg_train = pca_g.transform(Xg_train)
-    Xg_test  = pca_g.transform(Xg_test)
-    Xb_train = pca_b.transform(Xb_train)
-    Xb_test  = pca_b.transform(Xb_test)
+        # 2️⃣ Standard-scale the concatenated group
+        std_scaler = StandardScaler().fit(X_tr_grp)
+        X_tr_grp = std_scaler.transform(X_tr_grp)
+        X_te_grp = std_scaler.transform(X_te_grp)
 
-    return np.concatenate([Xb_train, Xg_train], axis=1), np.concatenate([Xb_test, Xg_test], axis=1)
+        # 3️⃣ PCA – keep at most the available column count
+        n_keep = n_comps
+        pca = PCA(n_components=n_keep, random_state=42).fit(X_tr_grp)
+        X_tr_parts.append(pca.transform(X_tr_grp))
+        X_te_parts.append(pca.transform(X_te_grp))
+
+    return np.concatenate(X_tr_parts, axis=1), np.concatenate(X_te_parts, axis=1)
 
 
 def make_design_matrices(tr, te, blocks_all, names, cfg, smiles_vec):
@@ -65,10 +117,8 @@ def make_design_matrices(tr, te, blocks_all, names, cfg, smiles_vec):
     if cfg["use_pca"]:
         seq_tr, seq_te = scale_and_reduce_blocks(b_tr, b_te, names, cfg["n_comps"])
     else:
-        bl_tr, gl_tr = split_blocks(names, b_tr)
-        bl_te, gl_te = split_blocks(names, b_te)
-        seq_tr = np.concatenate(bl_tr + gl_tr, 1)
-        seq_te = np.concatenate(bl_te + gl_te, 1)
+        seq_tr = np.concatenate(reorder_blocks(names, b_tr), axis=1)
+        seq_te = np.concatenate(reorder_blocks(names, b_te), axis=1)
     X_tr = np.concatenate([smiles_vec[tr], seq_tr], 1)
     X_te = np.concatenate([smiles_vec[te], seq_te], 1)
     return X_tr, X_te
