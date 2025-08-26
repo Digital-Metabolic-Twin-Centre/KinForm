@@ -1,3 +1,4 @@
 results/
 code/smiles_embeddings/FARM_model/model.safetensors
 code/cat_sites.csv
+.vscode/settings.json
