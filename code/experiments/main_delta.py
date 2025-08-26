@@ -15,8 +15,6 @@ Probe-enzyme evaluation on the DLKcat dataset
 • Collect real kcat and both predictions in one tidy, wide dataframe
   (row = enzyme cluster, columns = WT + mutants + “_<model>” predictions)
   and save to CSV.
-
-Author: ChatGPT | 2025-06-04
 """
 from __future__ import annotations
 
