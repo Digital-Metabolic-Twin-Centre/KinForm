@@ -155,8 +155,9 @@ def main():
 
                 if cfg_name.startswith("KinForm-L"):
                     tr_bal = oversample_similarity_balanced_indices(tr_idx, sequences)
+                    print(f"Fold {fold_no} ({split_mode}): oversampled to {len(tr_bal)} rows from {len(tr_idx)} original rows using similarity-based oversampling.")
                     tr_bal = oversample_kcat_balanced_indices(tr_bal, y_full)
-                    print(f"Fold {fold_no} ({split_mode}): oversampled {len(tr_bal)} rows from {len(tr_idx)} original rows.")
+                    print(f"Fold {fold_no} ({split_mode}): oversampled to {len(tr_bal)} rows from {len(tr_idx)} original rows using kcat-based oversampling.")
                     Xb_tr, Xb_te = make_design_matrices(tr_bal, te_idx, blocks_all, block_names, cfg, smiles_vec)
                     yb_tr = y_full[tr_bal]
                     tag = cfg_name + "(OS)"

@@ -137,7 +137,7 @@ def oversample_similarity_balanced_indices(
         rows_by_band[band_for[row2uniq[local_row]]].append(global_row)
 
     # target size = size of >=0.90 band (or max band if empty)
-    target = int(0.2 * (len(rows_by_band[HIGH_BAND]) or max(len(v) for v in rows_by_band.values())))
+    target = int(0.15 * (len(rows_by_band[HIGH_BAND]) or max(len(v) for v in rows_by_band.values())))
 
     rng = np.random.default_rng(SEED)
     new_idx: List[int] = []
