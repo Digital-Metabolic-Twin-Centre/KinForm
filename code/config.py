@@ -124,3 +124,31 @@ CONFIG_UniKP = dict(
     use_t5=True,
     t5_last_layer=True,
 )
+
+# ---- Configs for Ablation Study ----
+CONFIG_BASE = CONFIG_UniKP.copy()
+CONFIG_BASE.update(dict(name="Base (UniKP)"))
+
+CONFIG_PLUS_ESMC = CONFIG_BASE.copy()
+CONFIG_PLUS_ESMC.update(dict(use_esmc=True, name="+ESMC"))
+
+CONFIG_PLUS_ESM2 = CONFIG_PLUS_ESMC.copy()
+CONFIG_PLUS_ESM2.update(dict(use_esm2=True, name="+ESMC+ESM2"))
+
+CONFIG_BINDING = CONFIG_PLUS_ESM2.copy()
+CONFIG_BINDING.update(dict(prot_rep_mode="binding", name="+ESMC+ESM2+BindingAverage"))
+
+CONFIG_BONDING_PLUS_GLOBAL = CONFIG_BINDING.copy()
+CONFIG_BONDING_PLUS_GLOBAL.update(dict(prot_rep_mode="binding+global", name="+ESMC+ESM2+BindingAverage+GlobalAverage (KinForm-H)"))
+
+CONFIG_PLUS_PCA = CONFIG_BONDING_PLUS_GLOBAL.copy()
+CONFIG_PLUS_PCA.update(dict(use_pca=True, n_comps=300, name="+ESMC+ESM2+BindingAverage+GlobalAverage+PCA (KinForm-L)"))
+
+CONFIGS_ABLATION = [
+    CONFIG_BASE,
+    CONFIG_PLUS_ESMC,
+    CONFIG_PLUS_ESM2,
+    CONFIG_BINDING,
+    CONFIG_BONDING_PLUS_GLOBAL,
+    CONFIG_PLUS_PCA
+]
