@@ -38,5 +38,5 @@ def train_model(
 
     # if return_one_pred is False --> return matrix of all trees' predictions (n_trees, n_targets)
     y_pred_matrix = np.stack([est.predict(X_test) for est in model.estimators_], axis=0)
-
+    
     return model, y_pred, metrics, y_pred_matrix
