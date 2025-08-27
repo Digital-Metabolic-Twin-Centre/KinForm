@@ -28,7 +28,6 @@ from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
 from model_training import train_model
 from utils.pca import make_design_matrices
-import numpy as np
 SEED = 42
 np.random.seed(SEED)
 # paths -------------------------------------------------------------- #
@@ -66,7 +65,7 @@ def get_intervals(y_matrix, method='normal', alpha=0.1, centre="mean"):
         upper = np.quantile(y_matrix, q=1 - alpha/2, axis=0)
     elif method == 'normal':
         z = scipy_norm.ppf(1 - alpha/2)
-        s = y_matrix.std(axis=0, ddof=1)
+        s = y_matrix.std(axis=0)
         lower = pred - z * s
         upper = pred + z * s
     else:
@@ -164,9 +163,7 @@ def eval_intervals(y_real, y_matrix, centre, method, alpha):
     abs_err = np.abs(y_real - pred)
     mae = float(np.mean(abs_err))
 
-    # Across-tree SD as an uncertainty proxy (use ddof=1 if >1 tree)
-    ddof = 1 if n_trees > 1 else 0
-    sd = y_matrix.std(axis=0, ddof=ddof)
+    sd = y_matrix.std(axis=0)
     # Correlation between SD and absolute error (guard against zero variance)
     if np.allclose(sd.std(), 0.0) or np.allclose(abs_err.std(), 0.0):
         sd_abs_err_corr = np.nan
@@ -251,25 +248,29 @@ for fold_no, (tr, te) in enumerate(pbar, 1):
     y_tr, y_te = y_np[tr], y_np[te]
     model, y_pred, metrics, y_pred_matrix = train_model(X_tr, y_tr, X_te, y_te, fold=fold_no,return_one_pred=False)
     # y_pred_matrix is the predicted value of each tree on each test sample (y_pred_matrix[i] is the ith tree's prediction for all test samples)
+    matrix_metrics = []
     for centre in ['mean','median']:
         for method in ['quantile','normal']:
             for alpha in [0.05,0.1,0.2]:
-                matrix_metrics = eval_intervals(y_te, y_pred_matrix, centre=centre, method=method, alpha=alpha)
-                folds_out.append(
-                    dict(
-                        fold=fold_no,
-                        r2=metrics["r2"],
-                        rmse=metrics["rmse"],
-                        y_true=y_te.tolist(),
-                        y_pred=y_pred.tolist(),
-                        train_indices=tr.tolist(),
-                        test_indices=te.tolist(),
-                        y_pred_matrix = y_pred_matrix,
-                        matrix_metrics = matrix_metrics,
-                        centre=centre,
-                        method=method,
-                        alpha=alpha,
-                    )
+                mm = eval_intervals(y_te, y_pred_matrix, centre=centre, method=method, alpha=alpha)
+                matrix_metrics.append(dict(
+                    centre=centre,
+                    method=method,
+                    alpha=alpha,
+                    **mm
+                ))
+    folds_out.append(
+        dict(
+            fold=fold_no,
+            r2=metrics["r2"],
+            rmse=metrics["rmse"],
+            y_true=y_te.tolist(),
+            y_pred=y_pred.tolist(),
+            train_indices=tr.tolist(),
+            test_indices=te.tolist(),
+            y_pred_matrix = y_pred_matrix,
+            matrix_metrics = matrix_metrics,
+        )
     )
 
 # save ----------------------------------------------------------------
