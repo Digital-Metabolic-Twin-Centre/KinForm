@@ -1,11 +1,10 @@
 """
-Only KinForm-L
-Train 5 kGroupFold. Each time save predictions of each tree on each point in the test set. *
-- Compute confidence intervals for the predictions (mean +/- sd) *
-- Calc accuracy (percentage of real values that fall within the confidence intervals)*
-- How big are confidence intervals? Visualize
-- Show accuracy per similarity bin
-- How big are confidence intervals within each similarity bin? Visualize
+TODO:
+Visualize:
+    - How big are confidence intervals?
+    - How correlated are confidence intervals with error
+    - How accurate are confidence intervals?
+    ... rest of metrics
 """
 from __future__ import annotations
 
@@ -133,7 +132,7 @@ def eval_intervals(y_real, y_matrix, centre, method, alpha):
     y_matrix = np.asarray(y_matrix)
     if y_matrix.ndim != 2:
         raise ValueError("y_matrix must be 2D: (n_trees, n_samples).")
-    n_trees, n_samples = y_matrix.shape
+    _, n_samples = y_matrix.shape
     if y_real.shape[0] != n_samples:
         raise ValueError("y_real length must match n_samples in y_matrix.")
     if not (0 < alpha < 1):
