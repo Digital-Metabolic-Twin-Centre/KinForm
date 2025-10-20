@@ -36,6 +36,7 @@ import argparse
 import json
 import math
 import os
+import warnings
 from pathlib import Path
 from typing import Dict, Tuple, List
 import joblib
@@ -43,6 +44,10 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupKFold, KFold
 from sklearn.metrics import r2_score, mean_squared_error
+
+# Silence warnings
+warnings.filterwarnings("ignore", category=UserWarning, message=".*enable_nested_tensor.*")
+
 # ──────────────────────────── local imports ───────────────────────── #
 from config import CONFIG_H, CONFIG_L, CONFIG_UniKP
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab 
@@ -131,7 +136,8 @@ def build_design_matrix(
     smis: np.ndarray,
     cfg: Dict,
     task: str = "kcat",
-) -> np.ndarray:
+    transformers: dict | None = None,
+) -> tuple[np.ndarray, dict | None]:
     """
     Convert sequences & SMILES to the final feature matrix.
     Uses make_design_matrices which handles PCA internally.
@@ -162,9 +168,9 @@ def build_design_matrix(
 
     # Use all indices for training
     all_idx = np.arange(len(seqs))
-    X, _ = make_design_matrices(all_idx, all_idx, blocks_all, block_names, cfg, smiles_vec)
-    
-    return X
+    X, _, fitted = make_design_matrices(all_idx, all_idx, blocks_all, block_names, cfg, smiles_vec, transformers=transformers)
+
+    return X, fitted
 
 
 # ═════════════════════════ main routine ════════════════════════════ #
@@ -225,7 +231,8 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
                 te_idx = np.asarray(te_idx, int)
                 
                 # Build design matrices
-                X_tr, X_te = make_design_matrices(
+                # For CV folds, do not reuse fitted transformers across folds
+                X_tr, X_te, _ = make_design_matrices(
                     tr_idx, te_idx, blocks_all, block_names, cfg, smiles_vec
                 )
                 y_tr, y_te = y[tr_idx], y[te_idx]
@@ -267,9 +274,9 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
         
     else:
         # Original behavior: train on all data
-        X = build_design_matrix(seqs, smis, cfg, task=task)
+        X, fitted = build_design_matrix(seqs, smis, cfg, task=task)
         print(f"✓ Built design matrix with shape {X.shape}.")
-        
+
         if cfg_name == "KinForm-L" and task == "kcat":
             from utils.oversampling import (
                 oversample_similarity_balanced_indices,
@@ -283,12 +290,17 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
             print(f"  ↪ After kcat oversampling: {len(indices)} samples")
             X = X[indices]
             y = y[indices]
-        
+
         model, _, metrics = train_model(X, y, X, y, fold=0)
         print(f"✓ Training finished – R² on full data: {metrics['r2']:.3f}")
 
         joblib.dump(model, model_dir / "model.joblib")
         print(f"✓ Model saved to {model_dir}")
+
+        # If PCA was used, save the fitted transformers (scalers + PCA) used to build X
+        if cfg.get("use_pca", False) and fitted is not None:
+            joblib.dump(fitted, model_dir / "transformers.joblib")
+            print(f"✓ Transformers saved to {model_dir / 'transformers.joblib'}")
 
 
 def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path, data_path: Path | None = None) -> None:
@@ -297,7 +309,13 @@ def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path, data_path:
     seqs, smis, y_true_log = get_dataset(task, data_path)
     cfg = CONFIG_MAP[cfg_name]
 
-    X = build_design_matrix(seqs, smis, cfg, task=task)
+    # Load transformers if present and PCA is used by the config
+    transformers = None
+    if cfg.get("use_pca", False) and (model_dir / "transformers.joblib").exists():
+        transformers = joblib.load(model_dir / "transformers.joblib")
+        print(f"✓ Loaded transformers from {model_dir / 'transformers.joblib'}")
+
+    X, _ = build_design_matrix(seqs, smis, cfg, task=task, transformers=transformers)
     y_pred_log = model.predict(X)
     
     # Convert from log10 scale back to original scale
