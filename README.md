@@ -23,14 +23,17 @@ Path A — Train and run with the Zenodo bundle
 Use this if you want to train/evaluate/predict with the same assets used in the paper.
 
 ### 1) Download the Zenodo bundle(s) and extract under `results/` (repo root)
-
-- Trained models, binding-site predictions, mapping files, etc.: <placeholder-zenodo-link> (includes binding-site TSVs for transparency/inspection; not required to run)
-- Precomputed protein embeddings: <placeholder-zenodo-link>
+Download <https://zenodo.org/records/17399910>. This includes:
+- Trained models
+- Protein embedddings
+- Sequence ID mapping 
+- pseq2sites binding-site predictions (for transparency/inspection; not required to run)
 
 After extraction, your tree should include:
 
 - `results/sequence_id_to_sequence.pkl`
 - `results/protein_embeddings/...` (e.g., `esm2_layer_26/`, `esmc_layer_32/`, `prot_t5_res/`)
+- `results/trained_models/...` (e.g `kcat_KinForm-L`, `kcat_KinForm-H`)
 - Optional (for inspection only): `results/binding_sites/prediction.tsv`, `prediction_2.tsv` … `prediction_7.tsv` (Pseq2Sites outputs for all proteins)
 
 ### 2) Train models (run commands from `code/`)
@@ -110,5 +113,26 @@ Example files: `prediction.tsv`, `prediction_2.tsv`, … `prediction_7.tsv`
 ### 4) Train and predict
 
 - Use the same commands as in Path A.
+
+
+Acknowledgments
+---------------
+This work builds upon and benefits from several excellent open-source projects:
+
+### Tools and Methods
+- **[Pseq2Sites](https://github.com/Blue1993/Pseq2Sites)** – for generating binding site predictions
+- **[UniKP](https://github.com/xxxx)** – baseline model for kinetic parameter prediction
+- **[SMILES Transformer](https://github.com/DSPsleeporg/smiles-transformer)** – for generating small molecule embeddings
+
+### Protein Embedding Models
+- **[ESM (Facebook Research)](https://github.com/facebookresearch/esm)** – ESM2 protein language models
+- **[ESM (Evolutionary Scale)](https://github.com/evolutionaryscale/esm)** – ESMC protein embeddings
+- **[ProstT5](https://github.com/mheinzinger/ProstT5)** – ProtT5 protein embeddings
+
+### Related Work
+We also acknowledge the following projects that helped us understand the task of kinetic parameter prediction:
+- **[DLKcat](https://github.com/SysBioChalmers/DLKcat)**
+- **[TurNup](https://github.com/AlexanderKroll/kcat_prediction)**
+- **[EITLEM-Kinetics](https://github.com/XvesS/EITLEM-Kinetics)**
 
 
