@@ -210,76 +210,51 @@ def _load_existing_embeddings(
 # --------------------------------------------------------------------------- #
 if __name__ == "__main__":
     """
-    This main block mirrors the structure of the example provided.
-    Modify the variables `SETTING`, `ALL_LAYERS`, and `LAYER`
-    to switch between the three operating modes described in the
-    module docstring.
+    Extract ProtT5 embeddings for unique sequences.
+    Runs for layer 19 and last layer (residue setting).
     """
     from pathlib import Path
-    # ------------------------ user-editable options ---------------------- #
-    BATCH_SIZE: int = 1
-
-    # # Choose exactly ONE of the following:
-    # import argparse
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("layer", type=int, help="Which ProtT5 encoder layer to extract (0–23)")
-    # args = parser.parse_args()
-
-    # Embedding config
+    
+    # Paths relative to repository root
+    ROOT = Path(__file__).resolve().parent.parent.parent
+    UNIQUE_SEQ_IDS = ROOT / "data/unique_seq_ids.txt"
+    SEQ_ID_TO_SEQ = ROOT / "results/sequence_id_to_sequence.pkl"
+    
+    # Load sequence ID to sequence mapping
+    id_to_seq: Dict[str, str] = pickle.load(open(SEQ_ID_TO_SEQ, "rb"))
+    
+    # Load unique sequence IDs from file
+    with open(UNIQUE_SEQ_IDS, "r") as f:
+        seq_ids = [line.strip() for line in f if line.strip()]
+    
+    # Build sequence dictionary
+    seq_dict = {sid: id_to_seq[sid] for sid in seq_ids if sid in id_to_seq}
+    print(f"Loaded {len(seq_dict)} unique sequences")
+    
+    # Configuration
+    BATCH_SIZE = 1
     SETTING = "residue"
-    ALL_LAYERS = False
-    LAYER = None
-
-    # ------------------------------------------------------------------- #
-    dlkcat_df_path = "/home/msp/saleh/KinForm/results/dlkcat_df.pkl"
-    seq_id_to_seq_path = "/home/msp/saleh/KinForm/results/sequence_id_to_sequence.pkl"
-    eitlem_csv_path = "/home/msp/saleh/KinForm/results/eitlemall_subset.csv"
-    km_raw_json = "/home/msp/saleh/KinForm/data/KM_data_raw.json"
-
-    # -------------------- build the {id: sequence} dict ----------------- #
-    RAW_DLKCAT = Path("/home/msp/saleh/KinForm/data/dlkcat_raw.json")
-    raw = [d for d in json.loads(RAW_DLKCAT.read_text())
-           if len(d["Sequence"]) <= 1499 and float(d["Value"]) > 0 and "." not in d["Smiles"]]
-
-    sequences = [d["Sequence"] for d in raw]
-
-    id_to_seq: Dict[str, str] = pickle.load(open(seq_id_to_seq_path, "rb"))
-    seq_to_id = {seq: sid for sid, seq in id_to_seq.items()}
-    dlkcat_seq_ids = list(set([seq_to_id[seq] for seq in sequences]))
-
-    eitlem_df = pd.read_csv(eitlem_csv_path)
-    eitlem_seqs = set(eitlem_df["sequence"].unique())
-    eitlem_ids = {seq_to_id[s] for s in eitlem_seqs if s in seq_to_id}
-
-    with open(km_raw_json, "r") as fp:
-        km_raw = json.load(fp)
-    km_seqs = {d["Sequence"] for d in km_raw if len(d["Sequence"]) <= 1499 and "." not in d["smiles"]}
-    km_ids = {seq_to_id[s] for s in km_seqs if s in seq_to_id}
-
-
-    with open('/home/msp/saleh/KinForm/data/EITLEM_data/KM/km_data.json', 'r') as fp:
-        raw = json.load(fp)
-    sequences = [d["sequence"] for d in raw if len(d["sequence"]) <= 1499]
-    sequences = list(set(sequences))
-    eit_km_seq_ids = [seq_to_id[seq] for seq in sequences if seq in seq_to_id]
-
-    sequences_df = pd.read_csv("/home/msp/saleh/KinForm/results/synthetic_data/filtered_dlkcat_sequences.csv")
-    sequences_list = sequences_df["sequence"].tolist()
-    syn_seq_ids = [seq_to_id[seq] for seq in sequences_list if seq in seq_to_id]
-
-    seq_ids = dlkcat_seq_ids + list(eitlem_ids) + list(km_ids) + list(eit_km_seq_ids) + list(syn_seq_ids)
-    seq_ids = list(set(seq_ids))
-    seq_dict = {sid: id_to_seq[sid] for sid in seq_ids}
-
-    # --------------------------- run embedding -------------------------- #
-    embeddings = get_prot_t5_embeddings(
-        seq_dict,
-        batch_size=BATCH_SIZE,
-        setting=SETTING,
-        all_layers=ALL_LAYERS,
-        layer=LAYER,
-        only_save=True,          # change to True if you don't need the return value
-        id_to_seq=id_to_seq,
-    )
-
-    print(f"Completed ProtT5 embedding extraction for {len(seq_dict)} sequences.")
+    LAYERS = [19, None]  # Layer 19 and last layer (None)
+    
+    # Run embeddings for each layer
+    for layer in LAYERS:
+        layer_name = "last" if layer is None else str(layer)
+        print(f"\n{'='*70}")
+        print(f"Extracting ProtT5 embeddings for layer {layer_name}")
+        print(f"{'='*70}")
+        
+        embeddings = get_prot_t5_embeddings(
+            seq_dict,
+            batch_size=BATCH_SIZE,
+            setting=SETTING,
+            all_layers=False,
+            layer=layer,
+            only_save=True,
+            id_to_seq=id_to_seq,
+        )
+        
+        print(f"✓ Completed ProtT5 layer {layer_name} embedding extraction")
+    
+    print(f"\n{'='*70}")
+    print(f"✓ All ProtT5 embeddings complete for {len(seq_dict)} sequences")
+    print(f"{'='*70}")

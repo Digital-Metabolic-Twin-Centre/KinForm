@@ -44,7 +44,7 @@ from config import (
 )
 
 # EITLEM paths (match evaluation script)
-ROOT        = Path("/home/msp/saleh/KinForm")
+ROOT        = Path("/home/saleh/KinForm-1")
 EITLEM_DIR  = ROOT / "data/EITLEM_data"
 EITLEM_JSON = EITLEM_DIR / "KCAT/kcat_data.json"
 

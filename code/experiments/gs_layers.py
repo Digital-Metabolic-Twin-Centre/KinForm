@@ -17,16 +17,16 @@ from utils.smiles_features import smiles_to_vec
 from model_training import train_model
 
 # Directories for layerwise mean embeddings
-ESMC_LAYER_DIR = Path("/home/msp/saleh/KinForm/results/embeddings/esmc_all_layers")
-T5_LAYER_DIR   = Path("/home/msp/saleh/KinForm/results/embeddings/prot_t5_all_layers")
-ESM2_LAYER_DIR = Path("/home/msp/saleh/KinForm/results/embeddings/esm2_all_layers")
+ESMC_LAYER_DIR = Path("/home/saleh/KinForm-1/results/embeddings/esmc_all_layers")
+T5_LAYER_DIR   = Path("/home/saleh/KinForm-1/results/embeddings/prot_t5_all_layers")
+ESM2_LAYER_DIR = Path("/home/saleh/KinForm-1/results/embeddings/esm2_all_layers")
 
 N_LAYERS_T5 = 24
 N_LAYERS_ESM2 = 34
 N_LAYERS_ESMC = 36
 
-RESULTS_PATH = Path("/home/msp/saleh/KinForm/results/all_layerwise_kcat_km_results.pkl")
-PLOT_PATH = Path("/home/msp/saleh/KinForm/results/plots/layerwise_kcat_km_models_comparison.png")
+RESULTS_PATH = Path("/home/saleh/KinForm-1/results/all_layerwise_kcat_km_results.pkl")
+PLOT_PATH = Path("/home/saleh/KinForm-1/results/plots/layerwise_kcat_km_models_comparison.png")
 
 
 def load_layer_mean(seq_id: str, layer: int, model: str):
@@ -67,7 +67,7 @@ def load_dataset_kcat():
     return sequences, smiles, labels_np
 
 def load_dataset_km():
-    with open('/home/msp/saleh/KinForm/data/KM_data_raw.json', 'r') as fp:
+    with open('/home/saleh/KinForm-1/data/KM_data_raw.json', 'r') as fp:
         raw = json.load(fp)
     raw = [d for d in raw if len(d["Sequence"]) <= 1499 and "." not in d["smiles"]]
     sequences = [d["Sequence"] for d in raw]

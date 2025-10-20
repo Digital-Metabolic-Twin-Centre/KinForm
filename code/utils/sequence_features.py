@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from tqdm import tqdm
 # --------------------------------------------------------------------- #
 def _truncate_first_last(arr: np.ndarray,
@@ -70,7 +70,7 @@ def _load_residue_embeddings(seq_id: str,
                              t5_last_layer: bool = False,
                              task: str,
                              ) -> np.ndarray:
-    base_dir = Path("/home/msp/saleh/KinForm/results/embeddings")
+    base_dir = Path("/home/saleh/KinForm-1/results/embeddings")
 
     if task == "kcat":
         t5_dir = base_dir / "prot_t5_layer_17" if not t5_last_layer else base_dir / "prot_t5_res"
@@ -98,6 +98,47 @@ def _load_residue_embeddings(seq_id: str,
     return np.concatenate(emb_list, axis=1) if len(emb_list) > 1 else emb_list[0]
 
 
+def _try_load_precomputed_vectors(
+    seq_id: str,
+    model_name: str,
+    vec_type: str = "mean"
+) -> Tuple[bool, Optional[np.ndarray]]:
+    """
+    Attempt to load pre-computed vectors from local storage.
+    
+    Parameters
+    ----------
+    seq_id : str
+        Sequence identifier (e.g., "Sequence 755")
+    model_name : str
+        Name of the embedding model (e.g., "esm2_layer_26")
+    vec_type : str
+        Type of vector to load: "mean" or "binding"
+        
+    Returns
+    -------
+    Tuple[bool, Optional[np.ndarray]]
+        (success, vector) - success is True if vector was loaded successfully
+    """
+    precomputed_root = Path("/home/saleh/KinForm-1/results/protein_embeddings")
+    
+    try:
+        if vec_type == "mean":
+            vec_path = precomputed_root / model_name / "mean_vecs" / f"{seq_id}.npy"
+            if vec_path.exists():
+                return True, np.load(vec_path)
+        elif vec_type == "binding":
+            vec_path = precomputed_root / model_name / "weighted_vecs" / f"{seq_id}.npy"
+            if vec_path.exists():
+                return True, np.load(vec_path)
+        else:
+            raise ValueError(f"Unknown vec_type: {vec_type}. Must be 'mean' or 'binding'")
+    except Exception:
+        pass
+    
+    return False, None
+
+
 
 # ---------- main extraction routine -----------------------------------------
 def sequences_to_features(
@@ -114,6 +155,7 @@ def sequences_to_features(
     t5_last_layer: bool = False,
     prot_rep_mode: str = "global",
     task: str = "kcat",
+    use_precomputed: bool = True,
 ) -> np.ndarray:
     """
     Computes a pooled protein feature vector for each input sequence.
@@ -160,6 +202,10 @@ def sequences_to_features(
             binding → ec → cat → global
     task : str, default="kcat"
         Either 'kcat' or 'KM'. Determines which layers are loaded for embeddings.
+    use_precomputed : bool, default=True
+        If True, attempt to load pre-computed vectors from local storage instead
+        of computing from full residue embeddings. Falls back to computing if
+        pre-computed vectors are not available.
 
     Returns:
     -------
@@ -177,14 +223,72 @@ def sequences_to_features(
     if needs_cat and cat_sites_df is None:
         raise ValueError("prot_rep_mode includes 'cat' but cat_sites_df is None")
 
+    # Determine which model layers to use based on task
+    if task == "kcat":
+        t5_model = "prot_t5_layer_17" if not t5_last_layer else "prot_t5_res"
+        esmc_model = "esmc_layer_24"
+        esm2_model = "esm2_layer_26"
+    elif task == "KM":
+        t5_model = "prot_t5_layer_19" if not t5_last_layer else "prot_t5_res"
+        esmc_model = "esmc_layer_32"
+        esm2_model = "esm2_layer_29"
+    else:
+        raise ValueError(f"Unsupported task: {task}")
+    
+    # Track which models are being used
+    active_models = []
+    if use_t5:
+        active_models.append(t5_model)
+    if use_esmc:
+        active_models.append(esmc_model)
+    if use_esm2:
+        active_models.append(esm2_model)
+
     features: List[np.ndarray] = []
+    precomputed_hits = 0
+    precomputed_misses = 0
 
     for seq in tqdm(sequence_list, desc="Processing sequences", ncols=100):
         seq_id = seq_to_id.get(seq)
         if seq_id is None:
             raise KeyError(f"Sequence not found in lookup: {seq[:20]}…")
 
-        # -------- load embeddings ------------------------------------
+        # -------- Try loading pre-computed vectors -------------------
+        can_use_precomputed = (
+            use_precomputed 
+            and len(active_models) == 1  # Only works for single-model case
+            and "ec" not in mode_tokens  # EC weighting not pre-computed
+            and "cat" not in mode_tokens  # Catalytic weighting not pre-computed
+        )
+        
+        if can_use_precomputed:
+            model_name = active_models[0]
+            parts_precomputed: List[np.ndarray] = []
+            precomputed_success = True
+            
+            # Try to load each requested vector type
+            for part in ("binding", "global"):
+                if part not in mode_tokens:
+                    continue
+                
+                vec_type = "mean" if part == "global" else "binding"
+                success, vec = _try_load_precomputed_vectors(seq_id, model_name, vec_type)
+                
+                if success:
+                    parts_precomputed.append(vec)
+                else:
+                    precomputed_success = False
+                    break
+            
+            if precomputed_success:
+                pooled = np.concatenate(parts_precomputed) if len(parts_precomputed) > 1 else parts_precomputed[0]
+                features.append(pooled)
+                precomputed_hits += 1
+                continue
+        
+        # -------- Fallback: compute from full residue embeddings -----
+        precomputed_misses += 1
+        
         resid_emb = _load_residue_embeddings(
             seq_id,
             use_t5=use_t5,
@@ -234,11 +338,16 @@ def sequences_to_features(
 
         pooled = np.concatenate(parts) if len(parts) > 1 else parts[0]
         features.append(pooled)
+    
+    # Report pre-computed usage
+    if use_precomputed and precomputed_hits > 0:
+        total = precomputed_hits + precomputed_misses
+        print(f"  ℹ Pre-computed vectors: {precomputed_hits}/{total} ({100*precomputed_hits/total:.1f}%)")
 
     return np.vstack(features)
 
 def _load_single_embedding(seq_id: str, model: str, task: str, t5_last_layer: bool = False) -> np.ndarray:
-    base_dir = Path("/home/msp/saleh/KinForm/results/embeddings")
+    base_dir = Path("/home/saleh/KinForm-1/results/embeddings")
     if task == "kcat":
         layer_map = {
             "t5": base_dir / "prot_t5_layer_17" if not t5_last_layer else base_dir / "prot_t5_res",
@@ -274,6 +383,7 @@ def sequences_to_feature_blocks(
     t5_last_layer: bool = False,
     prot_rep_mode: str = "binding+cat+global",
     task: str = "kcat",
+    use_precomputed: bool = True,
 ) -> Tuple[List[np.ndarray], List[str]]:
     """
     Returns a list of named feature blocks for each protein sequence.
@@ -310,6 +420,10 @@ def sequences_to_feature_blocks(
         For each model, a block is generated for every selected mode.
     task : str, default="kcat"
         Either 'kcat' or 'KM', which determines which layers are loaded.
+    use_precomputed : bool, default=True
+        If True, attempt to load pre-computed vectors from local storage instead
+        of computing from full residue embeddings. Falls back to computing if
+        pre-computed vectors are not available.
 
     Returns:
     -------
@@ -329,67 +443,132 @@ def sequences_to_feature_blocks(
     if needs_cat and cat_sites_df is None:
         raise ValueError("prot_rep_mode includes 'cat' but cat_sites_df is None")
 
+    # Determine which model layers to use based on task
+    if task == "kcat":
+        model_map = {
+            "T5": "prot_t5_layer_17" if not t5_last_layer else "prot_t5_res",
+            "ESMC": "esmc_layer_24",
+            "ESM2": "esm2_layer_26"
+        }
+    elif task == "KM":
+        model_map = {
+            "T5": "prot_t5_layer_19" if not t5_last_layer else "prot_t5_res",
+            "ESMC": "esmc_layer_32",
+            "ESM2": "esm2_layer_29"
+        }
+    else:
+        raise ValueError(f"Unsupported task: {task}")
+
     block_dict: Dict[str, List[np.ndarray]] = {}
+    precomputed_stats: Dict[str, int] = {}  # block_name -> hit_count
+    total_seqs = len(sequence_list)
 
     def pool(rep, mode, w, normalize=True):
         return rep.mean(axis=0) if mode == "global" else _weighted_mean(rep, w, normalize=normalize)
 
     for seq in tqdm(sequence_list, desc="Processing sequences", ncols=100):
         seq_id = seq_to_id[seq]
+        
+        # Try to load pre-computed vectors if enabled and EC weighting is not used
+        use_precomp_this_seq = (
+            use_precomputed 
+            and "ec" not in mode_tokens
+            and "cat" not in mode_tokens  # Catalytic weighting not pre-computed
+        )
+        
         # ---- load embeddings once per model -------------------------
         emb_cache: Dict[str, np.ndarray] = {}
+        
+        # For each active model, try pre-computed first, then fall back
+        active_models = []
         if use_t5:
-            emb_cache["T5"] = _load_single_embedding(seq_id, "t5",
-                                                     task=task,
-                                                     t5_last_layer=t5_last_layer)
+            active_models.append(("T5", "t5"))
         if use_esmc:
-            emb_cache["ESMC"] = _load_single_embedding(seq_id, "esmc", task=task)
+            active_models.append(("ESMC", "esmc"))
         if use_esm2:
-            emb_cache["ESM2"] = _load_single_embedding(seq_id, "esm2", task=task)
+            active_models.append(("ESM2", "esm2"))
+        
+        for mdl_name, mdl_key in active_models:
+            model_full_name = model_map[mdl_name]
+            loaded_from_precomputed = False
+            
+            if use_precomp_this_seq:
+                # Try to load all needed vectors for this model from pre-computed
+                precomp_vecs = {}
+                all_available = True
+                
+                for mode in ("binding", "global"):
+                    if mode not in mode_tokens:
+                        continue
+                    vec_type = "mean" if mode == "global" else "binding"
+                    success, vec = _try_load_precomputed_vectors(seq_id, model_full_name, vec_type)
+                    if success:
+                        precomp_vecs[mode] = vec
+                    else:
+                        all_available = False
+                        break
+                
+                if all_available:
+                    # All vectors available, use them directly
+                    for mode, vec in precomp_vecs.items():
+                        blk_name = f"{mdl_name}_{mode}"
+                        block_dict.setdefault(blk_name, []).append(vec)
+                        precomputed_stats[blk_name] = precomputed_stats.get(blk_name, 0) + 1
+                    loaded_from_precomputed = True
+            
+            # Fall back to loading full embeddings if needed
+            if not loaded_from_precomputed:
+                emb_cache[mdl_name] = _load_single_embedding(
+                    seq_id, mdl_key,
+                    task=task,
+                    t5_last_layer=t5_last_layer
+                )
 
-        L_full = next(iter(emb_cache.values())).shape[0]
+        # If we loaded any full embeddings, process them the traditional way
+        if emb_cache:
+            L_full = next(iter(emb_cache.values())).shape[0]
 
-        # ---- fetch weights ------------------------------------------
-        if "binding" in mode_tokens:
-            bs_weights = _fetch_weights(seq_id, binding_site_df,
-                                        key_col="PDB",
-                                        weights_col="Pred_BS_Scores")
-        if "ec" in mode_tokens:
-            w_key = "normal_logits" if use_ec_logits else "weights"
-            ec_weights = _fetch_weights(seq_id, ec_num_df,
-                                        key_col="sequence_id",
-                                        weights_col=w_key)
-        if needs_cat:
-            cat_weights = _fetch_cat_weights(seq_id, cat_sites_df,
-                                             key_col="sequence_id",
-                                             L=L_full)
-
-        # ---- optional truncation ------------------------------------
-        if needs_cat and L_full > 1024:
-            # slice every embedding in the cache
-            for mdl in emb_cache:
-                emb_cache[mdl] = _truncate_first_last(emb_cache[mdl])
+            # ---- fetch weights ------------------------------------------
             if "binding" in mode_tokens:
-                bs_weights = _truncate_first_last(bs_weights)
+                bs_weights = _fetch_weights(seq_id, binding_site_df,
+                                            key_col="PDB",
+                                            weights_col="Pred_BS_Scores")
             if "ec" in mode_tokens:
-                ec_weights = _truncate_first_last(ec_weights)
+                w_key = "normal_logits" if use_ec_logits else "weights"
+                ec_weights = _fetch_weights(seq_id, ec_num_df,
+                                            key_col="sequence_id",
+                                            weights_col=w_key)
+            if needs_cat:
+                cat_weights = _fetch_cat_weights(seq_id, cat_sites_df,
+                                                 key_col="sequence_id",
+                                                 L=L_full)
 
-        # ---- pooling & block collection -----------------------------
-        for mode in ("binding", "ec", "cat", "global"):
-            if mode not in mode_tokens:
-                continue
-            if mode == "binding":
-                w = bs_weights
-            elif mode == "ec":
-                w = ec_weights
-            elif mode == "cat":
-                w = cat_weights
-            else:
-                w = None
-            for mdl, rep in emb_cache.items():
-                blk_name = f"{mdl}_{mode}"
-                normalize = mode != "cat"
-                block_dict.setdefault(blk_name, []).append(pool(rep, mode, w,normalize=normalize))
+            # ---- optional truncation ------------------------------------
+            if needs_cat and L_full > 1024:
+                # slice every embedding in the cache
+                for mdl in emb_cache:
+                    emb_cache[mdl] = _truncate_first_last(emb_cache[mdl])
+                if "binding" in mode_tokens:
+                    bs_weights = _truncate_first_last(bs_weights)
+                if "ec" in mode_tokens:
+                    ec_weights = _truncate_first_last(ec_weights)
+
+            # ---- pooling & block collection -----------------------------
+            for mode in ("binding", "ec", "cat", "global"):
+                if mode not in mode_tokens:
+                    continue
+                if mode == "binding":
+                    w = bs_weights
+                elif mode == "ec":
+                    w = ec_weights
+                elif mode == "cat":
+                    w = cat_weights
+                else:
+                    w = None
+                for mdl, rep in emb_cache.items():
+                    blk_name = f"{mdl}_{mode}"
+                    normalize = mode != "cat"
+                    block_dict.setdefault(blk_name, []).append(pool(rep, mode, w, normalize=normalize))
 
     # ---- deterministic ordering -------------------------------------
     ordered_keys: List[str] = []
@@ -398,6 +577,14 @@ def sequences_to_feature_blocks(
             k = f"{mdl}_{mode}"
             if k in block_dict:
                 ordered_keys.append(k)
+
+    # Report pre-computed usage
+    if use_precomputed and precomputed_stats:
+        print("  ℹ Pre-computed vectors usage:")
+        for blk_name in ordered_keys:
+            if blk_name in precomputed_stats:
+                hits = precomputed_stats[blk_name]
+                print(f"    - {blk_name}: {hits}/{total_seqs} ({100*hits/total_seqs:.1f}%)")
 
     blocks = [np.vstack(block_dict[k]) for k in ordered_keys]
     return blocks, ordered_keys

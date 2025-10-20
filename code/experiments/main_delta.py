@@ -446,7 +446,7 @@ def main() -> None:
                 })
 
     long_df = pd.DataFrame(long_rows)
-    out_long = Path("/home/msp/saleh/KinForm/results/probe_enzyme_predictions_long.csv")
+    out_long = Path("/home/saleh/KinForm-1/results/probe_enzyme_predictions_long.csv")
     long_df.to_csv(out_long, index=False)
     print("\n✓ Long-format results written to:", out_long)
 

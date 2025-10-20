@@ -30,7 +30,7 @@ def load_data(dataset = "dlkcat"):
         smiles    = [d["Smiles"]    for d in raw]
         labels_np = np.array([math.log(float(d["Value"]), 10) for d in raw], dtype=np.float32)
     else:
-        with open("/home/msp/saleh/KinForm/data/EITLEM_data/KCAT/kcat_data.json", 'r') as fp:
+        with open("/home/saleh/KinForm-1/data/EITLEM_data/KCAT/kcat_data.json", 'r') as fp:
             raw = json.load(fp)
 
         def is_valid(e):
@@ -108,9 +108,9 @@ def main(dataset):
     flat_results = [entry for results in all_results.values() for entry in results]
 
     df = pd.DataFrame(flat_results)
-    df.to_csv(f"/home/msp/saleh/KinForm/results/pca_gs_{dataset}.csv", index=False)
+    df.to_csv(f"/home/saleh/KinForm-1/results/pca_gs_{dataset}.csv", index=False)
     # Save full results dict as pickle
-    pd.to_pickle(all_results, f"/home/msp/saleh/KinForm/results/pca_gs_{dataset}.pkl")
+    pd.to_pickle(all_results, f"/home/saleh/KinForm-1/results/pca_gs_{dataset}.pkl")
 
 if __name__ == "__main__":
     main('dlkcat')  

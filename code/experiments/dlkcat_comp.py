@@ -52,7 +52,7 @@ np.random.seed(SEED)
 CONFIGS = [CONFIG_L, CONFIG_H, CONFIG_UniKP]
 
 # output ------------------------------------------------------------- #
-OUT_DIR = Path("/home/msp/saleh/KinForm/results")
+OUT_DIR = Path("/home/saleh/KinForm-1/results")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_PKL = OUT_DIR / "unikp_kineform_dlkcat_data.pkl"
 CONFIG_PARAM_KEYS = ["name", "use_pca", "n_comps", "prot_rep_mode", 

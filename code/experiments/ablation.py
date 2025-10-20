@@ -30,13 +30,13 @@ from utils.pca import make_design_matrices
 SEED = 42
 np.random.seed(SEED)
 # paths -------------------------------------------------------------- #
-ROOT        = Path("/home/msp/saleh/KinForm")
+ROOT        = Path("/home/saleh/KinForm-1")
 EITLEM_DIR  = ROOT / "data/EITLEM_data"
 JSON_FILE   = EITLEM_DIR / "KCAT/kcat_data.json"
 TRAIN_PAIRS = EITLEM_DIR / "KCAT/KCATTrainPairInfo"
 TEST_PAIRS  = EITLEM_DIR / "KCAT/KCATTestPairInfo"
 RESULTS_PKL = ROOT / "results/ablation.pkl"
-OUT_DIR = Path("/home/msp/saleh/KinForm/results")
+OUT_DIR = Path("/home/saleh/KinForm-1/results")
 
 # ───────────────────────── data loading ──────────────────────────── #
 with JSON_FILE.open() as fp:

@@ -1,8 +1,8 @@
 from pathlib import Path
-CONDA_EXE   = Path("/home/msp/miniconda3/bin/conda")   # path to conda binary
-MMSEQS_ENV  = "mmseqs"                                 # name of env containing mmseqs
+CONDA_EXE   = Path("/home/saleh/anaconda3/bin/conda")   # path to conda binary
+MMSEQS_ENV  = "mmseqs2_env"                                 # name of env containing mmseqs
 
-DATA_DIR     = Path("/home/msp/saleh/KinForm")
+DATA_DIR     = Path("/home/saleh/KinForm-1")
 RAW_DLKCAT     = DATA_DIR / "data/dlkcat_raw.json"
 BS_PRED_DIRS = [
     DATA_DIR / "results/binding_sites/prediction.tsv"

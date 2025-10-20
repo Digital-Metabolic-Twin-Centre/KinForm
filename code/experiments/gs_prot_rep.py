@@ -36,7 +36,7 @@ def load_data(dataset = "dlkcat"):
         smiles    = [d["Smiles"]    for d in raw]
         labels_np = np.array([math.log(float(d["Value"]), 10) for d in raw], dtype=np.float32)
     else:
-        with open("/home/msp/saleh/KinForm/data/EITLEM_data/KCAT/kcat_data.json", 'r') as fp:
+        with open("/home/saleh/KinForm-1/data/EITLEM_data/KCAT/kcat_data.json", 'r') as fp:
             raw = json.load(fp)
 
         def is_valid(e):
@@ -109,9 +109,9 @@ def main(dataset):
             all_results[cfg["name"]].extend(results)
     flat_results = [entry for results in all_results.values() for entry in results]
     df_metrics = pd.DataFrame(flat_results)
-    df_metrics.to_csv(f"/home/msp/saleh/KinForm/results/prot_rep_gs.csv_{dataset}", index=False)
-    pd.to_pickle(all_results, f"/home/msp/saleh/KinForm/results/prot_rep_gs_{dataset}.pkl")
-    # pd.to_pickle(all_results, f"/home/msp/saleh/KinForm/results/ec_test.pkl")
+    df_metrics.to_csv(f"/home/saleh/KinForm-1/results/prot_rep_gs.csv_{dataset}", index=False)
+    pd.to_pickle(all_results, f"/home/saleh/KinForm-1/results/prot_rep_gs_{dataset}.pkl")
+    # pd.to_pickle(all_results, f"/home/saleh/KinForm-1/results/ec_test.pkl")
 
 if __name__ == "__main__":
     main(dataset="dlkcat")

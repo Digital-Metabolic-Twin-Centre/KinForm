@@ -14,7 +14,7 @@ CONFIG_H['name'] = "KinForm"
 CONFIGS = [CONFIG_H, CONFIG_UniKP]
     
 def main():
-    with open("/home/msp/saleh/KinForm/data/KM_data_raw.json", 'r') as fp:
+    with open("/home/saleh/KinForm-1/data/KM_data_raw.json", 'r') as fp:
         raw = json.load(fp)
 
     raw = [d for d in raw if len(d["Sequence"]) <= 1499 and "." not in d["smiles"]]
@@ -99,7 +99,7 @@ def main():
             all_results[cfg["name"]].extend(results)
 
     # Save full results dict as pickle
-    pd.to_pickle(all_results, "/home/msp/saleh/KinForm/results/unikp_comp_km.pkl")
+    pd.to_pickle(all_results, "/home/saleh/KinForm-1/results/unikp_comp_km.pkl")
 
 if __name__ == "__main__":
     main()

@@ -14,7 +14,7 @@ def extract_farm_embeddings(
     smiles_list: List[str],
     farm_model_name: str = "thaonguyen217/farm_molecular_representation",
     tmp_dir: str = "/tmp/farm_pipeline",
-    save_path: str = "/home/msp/saleh/KinForm/results/farm_embeddings/farm_embeddings.pkl",
+    save_path: str = "/home/saleh/KinForm-1/results/farm_embeddings/farm_embeddings.pkl",
 ) -> Dict[str, Dict[str, np.ndarray]]:
     """
     Full FARM embedding pipeline using SMILES list order.
@@ -91,7 +91,7 @@ def extract_farm_embeddings(
 
 
 if __name__ == "__main__":
-    DATA_DIR     = Path("/home/msp/saleh/KinForm")
+    DATA_DIR     = Path("/home/saleh/KinForm-1")
     RAW_DLKCAT     = DATA_DIR / "data/dlkcat_raw.json"
     
     import json
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     # dlkcat_smiles = [d["Smiles"] for d in raw]
     # dlkcat_unique_smiles = list(set(dlkcat_smiles))
     # print(f"Total unique DLKcat SMILES: {len(dlkcat_unique_smiles)}")
-    # eitlem_path = '/home/msp/saleh/KinForm/results/eitlem_smiles.pkl'
+    # eitlem_path = '/home/saleh/KinForm-1/results/eitlem_smiles.pkl'
     # with open(eitlem_path, 'rb') as f:
     #     eitlem_smiles = pickle.load(f)
     # eitlem_unique_smiles = list(set(eitlem_smiles))
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     from pathlib import Path
     import json
     # import numpy as np
-    # KM_RAW_JSON = Path("/home/msp/saleh/KinForm/data/KM_data_raw.json")
+    # KM_RAW_JSON = Path("/home/saleh/KinForm-1/data/KM_data_raw.json")
     # with KM_RAW_JSON.open("r") as fp:
     #     raw = json.load(fp)
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     #         and "." not in d['smiles']]               
     # smiles    = [d["smiles"]                 for d in raw]
     # all_smiles = list(set(smiles))
-    KM_RAW_JSON = Path("/home/msp/saleh/KinForm/data/EITLEM_data/KM/km_data.json")
+    KM_RAW_JSON = Path("/home/saleh/KinForm-1/data/EITLEM_data/KM/km_data.json")
     with KM_RAW_JSON.open("r") as fp:
         raw = json.load(fp)
 
@@ -137,5 +137,5 @@ if __name__ == "__main__":
     extract_farm_embeddings(
         smiles_list=all_smiles,
         farm_model_name="thaonguyen217/farm_molecular_representation",
-        save_path="/home/msp/saleh/KinForm/results/farm_embeddings/farm_embeddings.pkl",
+        save_path="/home/saleh/KinForm-1/results/farm_embeddings/farm_embeddings.pkl",
     )

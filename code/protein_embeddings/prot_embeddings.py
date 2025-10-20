@@ -274,62 +274,70 @@ def get_embeddings(seq_dict, batch_size=2, model=None, id_to_seq=None, setting='
                     for key in seq_dict
                 }
 if __name__ == '__main__':
-#     test_seq_dict = {'Sequence 0': 'AAAATQAVPAPNQQPEVFYNQIFINNEWHDAVSKKTFPTVNPSTGEVICQVAAGDKEDVDRAVKAARAAFQLGSPWRRMDASDRGRLLNRLADLIERDRTYLAALETLDNGKPYVISYLVDLDMVLKCLRYYAGWADKYHGKTIPIDGDFFSYTRHEPVGVCGQIIPWNFPLLMQAAKLGPALATGNVVVMKVAEQTPLTALYVANLTKEAGFPPGVVNVVPGFGPTAGAAIASHEDVDKVAFTGSTEVGHLIQVAAGRSNLKKVTLELGGKSPNIIVSDADMDWAVEQAHFALFFNQGQCCGAGSRTFVQEDVYAEFVERSVARAKSRVVGNPFDSQTEQGPQVDETQFNKVLGYIKSGKEEGAKLLCGGGAAADRGYFIQPTVFGDVQDGMTIAKEEIFGPVMQILKFKTIEEVVGRANNSKYGLAAAVFTKDLDKANYLSQALQAGTVWINCYDVFGAQSPFGGYKMSGNGRELGEYGLQAYTEVKTVTIKVPQKNS',
-#  'Sequence 1': 'AADIFAKFKTSMEVK',
-#  'Sequence 2': 'ADDINPKEECFFEDDYYEFE',
-#  'Sequence 3': 'ADDKNPLEECFCEDDDYCEG',
-#  'Sequence 4': 'ADDKNPLEECFREADYEEFLEIAKVTVLEASERNDKEDWYANLGPMRLPEKLNEFVQETENGWYFIKYPVKPSEEGKSAGQLYEESLRKSAGQLYQESLGKAHDDIFAYEKRFDEIVDGMDKLPTSMYQAIQERINFKPPLPPKKYAMGAITTFTPYQFQHFSEALTAPVGR',
-#  'Sequence 5': 'ADDKNPLEECFREDDYEEFLEIAKNGLEGWYANLGPMRYPVKPSEEGKHDDIFAYEKFDEIVGGMDKKFWEDDGIHGGKETFCYSPMIQKPYQFQHFSEALTAPVGR',
-#  'Sequence 6': 'ADDKNPLEECFREDDYEEFLEIAKNGLKKTSNPKHIVYPVKPSEQLYEESLRDQLPTSMHRYPSMIQKIFFAGEYTANAHGWIDSTIK'}
-
-    import json
-    import pandas as pd
-
-
-    # dlkcat_df_path = '/home/msp/saleh/KinForm/results/dlkcat_df.pkl'
-    # import pandas as pd
-    # df = pd.read_pickle(dlkcat_df_path)
-
-    # seq_ids = df['Sequence ID'].unique().tolist()
-    # seq_ids = list(set(seq_ids))
-    seq_id_to_seq_path = '/home/msp/saleh/KinForm/results/sequence_id_to_sequence.pkl'
-    seq_id_to_seq = pickle.load(open(seq_id_to_seq_path, 'rb'))
-    seq_to_seq_id = {v: k for k, v in seq_id_to_seq.items()}
-
-    # with open('/home/msp/saleh/KinForm/data/EITLEM_data/KM/km_data.json', 'r') as fp:
-    #     raw = json.load(fp)
-    # sequences = [d["sequence"] for d in raw if len(d["sequence"]) <= 1499]
-    # sequences = list(set(sequences))
-    # seq_ids = [seq_to_seq_id[seq] for seq in sequences if seq in seq_to_seq_id]
-    # for s_id in seq_ids:
-    #     assert seq_id_to_seq[s_id] == df[df['Sequence ID'] == s_id]['sequence'].values[0], f"Sequence ID {s_id} not found in sequence_id_to_sequence.pkl"
-    # eitlem_csv_path = '/home/msp/saleh/KinForm/results/eitlemall_subset.csv'
-    # eitlem_df = pd.read_csv(eitlem_csv_path)
-    # eitlem_seqs = eitlem_df['sequence'].unique().tolist()
-    # eitlem_seqs = list(set(eitlem_seqs))
-    # eitlem_seq_ids = [seq_to_seq_id[seq] for seq in eitlem_seqs if seq in seq_to_seq_id]
-    # eitlem_seq_ids = list(set(eitlem_seq_ids))
-
-
-    # with open('/home/msp/saleh/KinForm/data/KM_data_raw.json', 'r') as fp:
-    #     raw = json.load(fp)
-    # raw = [d for d in raw if len(d["Sequence"]) <= 1499 and "." not in d["smiles"]]
-    # sequences = [d["Sequence"] for d in raw]
-    # km_sequences = list(set(sequences))
-    # km_seq_ids = [seq_to_seq_id[seq] for seq in km_sequences]
-
-    # seq_ids = seq_ids + eitlem_seq_ids + km_seq_ids
-    sequences_df = pd.read_csv("/home/msp/saleh/KinForm/results/synthetic_data/filtered_dlkcat_sequences.csv")
-    sequences_list = sequences_df["sequence"].tolist()
-    seq_ids = [seq_to_seq_id[seq] for seq in sequences_list if seq in seq_to_seq_id]
-    seq_ids = list(set(seq_ids))
-
-    seq_dict = {s_id:seq_id_to_seq[s_id] for s_id in seq_ids}
+    """
+    Extract ESM embeddings for unique sequences.
+    Runs for ESM2 layers 26 and 29, and ESMC layers 24 and 32.
+    """
+    from pathlib import Path
     
-    embd = get_embeddings(seq_dict, model='esm2', batch_size=1, setting='residue', all_layers=False, only_save=True,layer=26)
-    # embd = get_embeddings(seq_dict, model='esm2', batch_size=1, setting='residue', all_layers=False, only_save=True,layer=29)
-
-    # embd = get_embeddings(seq_dict, model='esmc', batch_size=1, setting='residue', all_layers=False, only_save=True,layer=32)
-    embd = get_embeddings(seq_dict, model='esmc', batch_size=1, setting='residue', all_layers=False, only_save=True,layer=24)
-    # embd = get_embeddings(seq_dict, model='esm1v', batch_size=1, setting='both', only_save=True)
-    # embd = get_embeddings(seq_dict, model='esm2', batch_size=1, setting='both', only_save=True)
+    # Paths relative to repository root
+    ROOT = Path(__file__).resolve().parent.parent.parent
+    UNIQUE_SEQ_IDS = ROOT / "data/unique_seq_ids.txt"
+    SEQ_ID_TO_SEQ = ROOT / "results/sequence_id_to_sequence.pkl"
+    
+    # Load sequence ID to sequence mapping
+    seq_id_to_seq = pickle.load(open(SEQ_ID_TO_SEQ, 'rb'))
+    
+    # Load unique sequence IDs from file
+    with open(UNIQUE_SEQ_IDS, 'r') as f:
+        seq_ids = [line.strip() for line in f if line.strip()]
+    
+    # Build sequence dictionary
+    seq_dict = {s_id: seq_id_to_seq[s_id] for s_id in seq_ids if s_id in seq_id_to_seq}
+    print(f"Loaded {len(seq_dict)} unique sequences")
+    
+    # Configuration
+    BATCH_SIZE = 1
+    SETTING = 'residue'
+    
+    # ESM2 layers
+    esm2_layers = [26, 29]
+    for layer in esm2_layers:
+        print(f"\n{'='*70}")
+        print(f"Extracting ESM2 embeddings for layer {layer}")
+        print(f"{'='*70}")
+        
+        embd = get_embeddings(
+            seq_dict, 
+            model='esm2', 
+            batch_size=BATCH_SIZE, 
+            setting=SETTING, 
+            all_layers=False, 
+            only_save=True,
+            layer=layer
+        )
+        
+        print(f"✓ Completed ESM2 layer {layer} embedding extraction")
+    
+    # ESMC layers
+    esmc_layers = [24, 32]
+    for layer in esmc_layers:
+        print(f"\n{'='*70}")
+        print(f"Extracting ESMC embeddings for layer {layer}")
+        print(f"{'='*70}")
+        
+        embd = get_embeddings(
+            seq_dict, 
+            model='esmc', 
+            batch_size=BATCH_SIZE, 
+            setting=SETTING, 
+            all_layers=False, 
+            only_save=True,
+            layer=layer
+        )
+        
+        print(f"✓ Completed ESMC layer {layer} embedding extraction")
+    
+    print(f"\n{'='*70}")
+    print(f"✓ All embeddings complete for {len(seq_dict)} sequences")
+    print(f"{'='*70}")

@@ -46,7 +46,7 @@ TASKS: Dict[str, Dict] = {
         task_kw    = "kcat",
     ),
     "km": dict(
-        raw_path   = Path("/home/msp/saleh/KinForm/data/KM_data_raw.json"),
+        raw_path   = Path("/home/saleh/KinForm-1/data/KM_data_raw.json"),
         smiles_key = "smiles",
         seq_key    = "Sequence",
         value_key  = "log10_KM",
@@ -56,7 +56,7 @@ TASKS: Dict[str, Dict] = {
     ),
 }
 
-RESULTS_DIR = Path("/home/msp/saleh/KinForm/results")
+RESULTS_DIR = Path("/home/saleh/KinForm-1/results")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 def run_grid_search(task_name: str):

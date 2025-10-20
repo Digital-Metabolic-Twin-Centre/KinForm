@@ -16,7 +16,7 @@ SEED = 42
 rng  = np.random.default_rng(SEED)
 
 # ─────────────────────── paths / constants ───────────────── #
-ROOT        = Path("/home/msp/saleh/KinForm")
+ROOT        = Path("/home/saleh/KinForm-1")
 EITLEM_DIR  = ROOT / "data/EITLEM_data"
 JSON_FILE   = EITLEM_DIR / "KCAT/kcat_data.json"
 OUT_DIR     = ROOT / "results/hpo"

@@ -48,7 +48,9 @@ def smiles_transformer(Smiles):
         return torch.tensor(x_id), torch.tensor(x_seg)
     trfm = TrfmSeq2seq(len(vocab), 256, len(vocab), 4)
     state_dict_path = Path(__file__).resolve().parent.parent / "smiles_embeddings" / "smiles_transformer" / "trfm_12_23000.pkl"
-    trfm.load_state_dict(torch.load(state_dict_path))
+    # if cuda is available, device='cuda', else 'cpu'
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    trfm.load_state_dict(torch.load(state_dict_path, map_location=device))
     trfm.eval()
     x_split = [split(sm) for sm in Smiles]
     xid, xseg = get_array(x_split)
@@ -56,7 +58,7 @@ def smiles_transformer(Smiles):
     return X
 
 def farm(Smiles):
-    with open("/home/msp/saleh/KinForm/results/farm_embeddings/farm_embeddings.pkl", "rb") as f:
+    with open("/home/saleh/KinForm-1/results/farm_embeddings/farm_embeddings.pkl", "rb") as f:
         farm_dict = pickle.load(f)
 
     embeddings = []
@@ -97,7 +99,7 @@ def morgan_fingerprints(Smiles, radius=2, nBits=2048):
     return np.array(fingerprints)
 
 def molformer(Smiles):
-    with open("/home/msp/saleh/KinForm/results/molformer_embeddings/molformer_embeddings.pkl", "rb") as f:
+    with open("/home/saleh/KinForm-1/results/molformer_embeddings/molformer_embeddings.pkl", "rb") as f:
         molformer_dict = pickle.load(f)
 
     embeddings = []
@@ -114,7 +116,7 @@ def unimol(Smiles):
     mode: 'cls' or 'mean'
     Returns array of shape [L, 768]
     """
-    with open("/home/msp/saleh/KinForm/results/unimol_embeddings/unimol_embeddings.pkl", "rb") as f:
+    with open("/home/saleh/KinForm-1/results/unimol_embeddings/unimol_embeddings.pkl", "rb") as f:
         unimol_dict = pickle.load(f)
 
     embeddings = []

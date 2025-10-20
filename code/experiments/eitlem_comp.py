@@ -36,13 +36,13 @@ from utils.oversampling import (
 SEED = 42
 np.random.seed(SEED)
 # paths -------------------------------------------------------------- #
-ROOT        = Path("/home/msp/saleh/KinForm")
+ROOT        = Path("/home/saleh/KinForm-1")
 EITLEM_DIR  = ROOT / "data/EITLEM_data"
 JSON_FILE   = EITLEM_DIR / "KCAT/kcat_data.json"
 TRAIN_PAIRS = EITLEM_DIR / "KCAT/KCATTrainPairInfo"
 TEST_PAIRS  = EITLEM_DIR / "KCAT/KCATTestPairInfo"
 RESULTS_PKL = ROOT / "results/unikp_comp_eitlem.pkl"
-OUT_DIR = Path("/home/msp/saleh/KinForm/results")
+OUT_DIR = Path("/home/saleh/KinForm-1/results")
 
 CONFIGS = [CONFIG_L, CONFIG_H, CONFIG_UniKP]
 
