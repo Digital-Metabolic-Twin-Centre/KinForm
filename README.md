@@ -23,7 +23,7 @@ Path A — Train and run with the Zenodo bundle
 Use this if you want to train/evaluate/predict with the same assets used in the paper.
 
 ### 1) Download the Zenodo bundle(s) and extract under `results/` (repo root)
-Download <https://zenodo.org/records/17399910>. This includes:
+Download <https://zenodo.org/records/17400533>. This includes:
 - Trained models
 - Protein embedddings
 - Sequence ID mapping 
