@@ -6,27 +6,36 @@ Usage
 -----
 Run from the code/ directory:
 
-# TRAIN on all data (default)
-python main.py --mode train --task kcat \
-               --model_config KinForm-L
+# TRAIN on default dataset
+python main.py --mode train --task kcat --model_config KinForm-L
 
-# TRAIN with cross-validation (5-fold KFold + GroupKFold)
-python main.py --mode train --task kcat \
-               --model_config KinForm-L \
-               --train_test_split 0.8
+# TRAIN with cross-validation
+python main.py --mode train --task kcat --model_config KinForm-L --train_test_split 0.8
 
-# PREDICT
-python main.py --mode predict --task kcat \
-               --model_config KinForm-L \
-               --save_results ./predictions/kcat_L.csv
+# TRAIN on custom data
+python main.py --mode train --task kcat --model_config KinForm-L --data_path ./my_data.json
 
-Note: All paths are relative to the repository root and will work on any machine.
+# PREDICT on default dataset
+python main.py --mode predict --task kcat --model_config KinForm-L --save_results ./predictions.csv
+
+# PREDICT on custom data
+python main.py --mode predict --task kcat --model_config KinForm-L \
+               --save_results ./predictions.csv --data_path ./my_data.json
+
+Custom Data Format
+------------------
+JSON file with array of objects:
+- For kcat task: {"sequence": "MVKL...", "smiles": "CCO", "value": 123.4}
+- For KM task:   {"Sequence": "MVKL...", "smiles": "CCO", "log10_KM": -2.5}
+
+Note: All paths are relative to the repository root and work on any machine.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import math
+import os
 from pathlib import Path
 from typing import Dict, Tuple, List
 import joblib
@@ -64,11 +73,14 @@ CONFIG_MAP = {
 
 
 # ═════════════════════════ data loading ════════════════════════════ #
-def load_kcat() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def load_kcat(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return sequences, smiles and log10(kcat) as numpy arrays."""
-    print("Loading kcat data...")
-    with DATA_KCAT.open() as fp:
+    data_file = data_path if data_path else DATA_KCAT
+    print(f"Loading kcat data from {data_file}...")
+    
+    with data_file.open() as fp:
         raw = json.load(fp)
+    
     valid = [(r["sequence"], r["smiles"], float(r["value"]))
             for r in raw if len(r["sequence"]) <= 1499 and float(r["value"]) > 0]
     seqs, smis, y = zip(*valid)
@@ -76,21 +88,40 @@ def load_kcat() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     return np.asarray(seqs), np.asarray(smis), y
 
 
-def load_km() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def load_km(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return sequences, smiles and log10(KM) as numpy arrays."""
-    with DATA_KM.open() as fp:
+    data_file = data_path if data_path else DATA_KM
+    print(f"Loading KM data from {data_file}...")
+    
+    with data_file.open() as fp:
         raw = json.load(fp)
-    good = [(r["Sequence"], r["smiles"], float(r["log10_KM"]))
+    
+    valid = [(r["Sequence"], r["smiles"], float(r["log10_KM"]))
             for r in raw if len(r["Sequence"]) <= 1499 and "." not in r["smiles"]]
-    seqs, smis, y = zip(*good)
+    seqs, smis, y = zip(*valid)
     return np.asarray(seqs), np.asarray(smis), np.asarray(y, dtype=np.float32)
 
 
-def get_dataset(task: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_dataset(task: str, data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Load dataset for the specified task.
+    
+    Parameters
+    ----------
+    task : str
+        Either 'kcat' or 'KM'
+    data_path : Path | None
+        Optional path to custom JSON data file. If None, uses default dataset.
+    
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray]
+        (sequences, smiles, target_values)
+    """
     if task.lower() == "kcat":
-        return load_kcat()
+        return load_kcat(data_path)
     if task.lower() == "km":
-        return load_km()
+        return load_km(data_path)
     raise ValueError(f"Unknown task: {task}")
 
 
@@ -137,11 +168,11 @@ def build_design_matrix(
 
 
 # ═════════════════════════ main routine ════════════════════════════ #
-def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1.0) -> None:
+def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1.0, data_path: Path | None = None) -> None:
     model_dir.mkdir(parents=True, exist_ok=True)
     cfg = CONFIG_MAP[cfg_name]
 
-    seqs, smis, y = get_dataset(task)
+    seqs, smis, y = get_dataset(task, data_path)
     print(f"✓ Loaded {len(seqs)} {task} samples with sequences and SMILES.")
     
     # If train_test_split < 1.0, perform cross-validation
@@ -260,14 +291,22 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
         print(f"✓ Model saved to {model_dir}")
 
 
-def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path) -> None:
+def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path, data_path: Path | None = None) -> None:
     model = joblib.load(model_dir / "model.joblib")
 
-    seqs, smis, y_true = get_dataset(task)
+    seqs, smis, y_true_log = get_dataset(task, data_path)
     cfg = CONFIG_MAP[cfg_name]
 
     X = build_design_matrix(seqs, smis, cfg, task=task)
-    y_pred = model.predict(X)
+    y_pred_log = model.predict(X)
+    
+    # Convert from log10 scale back to original scale
+    if task.lower() == "kcat":
+        y_true = 10 ** y_true_log
+        y_pred = 10 ** y_pred_log
+    else:  # KM task - also in log10
+        y_true = 10 ** y_true_log
+        y_pred = 10 ** y_pred_log
 
     out = pd.DataFrame({
         "sequence": seqs,
@@ -277,7 +316,7 @@ def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path) -> None:
     })
     csv_out.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(csv_out, index=False)
-    print(f"✓ Predictions saved to {csv_out}")
+    print(f"✓ Predictions saved to {csv_out} (values in original scale, not log10)")
 
 
 # ══════════════════════════ CLI parser ═════════════════════════════ #
@@ -294,15 +333,22 @@ if __name__ == "__main__":
     p.add_argument("--train_test_split", type=float, default=1.0,
                 help="Proportion of data to use for training (default: 1.0 = all data). "
                      "If < 1.0, performs 5-fold KFold and GroupKFold cross-validation.")
+    p.add_argument("--data_path", type=Path,
+                help="Optional path to custom data JSON file. "
+                     "For kcat: JSON with 'sequence', 'smiles', 'value' (raw kcat, not log). "
+                     "For KM: JSON with 'Sequence', 'smiles', 'log10_KM'. "
+                     "If not provided, uses default datasets.")
 
     args = p.parse_args()
-    model_dir = Path(f"./models/{args.task}_{args.model_config}")
-
+    results_dir = ROOT / "results"
+    os.makedirs(results_dir, exist_ok=True)
+    model_dir = results_dir / f"./trained_models/{args.task}_{args.model_config}"
+    
     if args.mode == "train":
         if args.train_test_split <= 0.0 or args.train_test_split > 1.0:
             p.error("--train_test_split must be in range (0.0, 1.0]")
-        train(args.task, args.model_config, model_dir, args.train_test_split)
+        train(args.task, args.model_config, model_dir, args.train_test_split, args.data_path)
     else:  # predict
         if args.save_results is None:
             p.error("--save_results is required in predict mode")
-        predict(args.task, args.model_config, model_dir, args.save_results)
+        predict(args.task, args.model_config, model_dir, args.save_results, args.data_path)
