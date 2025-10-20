@@ -50,7 +50,7 @@ def smiles_transformer(Smiles):
     state_dict_path = Path(__file__).resolve().parent.parent / "smiles_embeddings" / "smiles_transformer" / "trfm_12_23000.pkl"
     # if cuda is available, device='cuda', else 'cpu'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    trfm.load_state_dict(torch.load(state_dict_path, map_location=device))
+    trfm.load_state_dict(torch.load(state_dict_path, map_location=device, weights_only=False))
     trfm.eval()
     x_split = [split(sm) for sm in Smiles]
     xid, xseg = get_array(x_split)
