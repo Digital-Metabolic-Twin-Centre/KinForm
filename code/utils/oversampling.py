@@ -70,7 +70,8 @@ def _unique_seqs(seqs: List[str]) -> Tuple[List[str], Dict[int, int]]:
 def oversample_kcat_balanced_indices(
     tr_idx: np.ndarray,
     y_values: np.ndarray,
-    bin_width: float = 1.0,   # fixed log-width
+    bin_width: float = 1.0,
+    target_multiplier: int = 2, # multiple of median bin size
 ) -> np.ndarray:
     """
     Oversample log₁₀(kcat) bins so that every non-empty 1-log unit bin
@@ -95,7 +96,7 @@ def oversample_kcat_balanced_indices(
         rows_by_bin[b].append(row)
 
     median_size = int(np.median([len(v) for v in rows_by_bin.values() if v]))
-    target = 2 * median_size
+    target = target_multiplier* median_size
 
     rng = np.random.default_rng(SEED)
     new_idx: list[int] = []
@@ -114,7 +115,8 @@ def oversample_kcat_balanced_indices(
     return np.asarray(new_idx, int)
 
 def oversample_similarity_balanced_indices(
-    tr_idx: np.ndarray, sequences: List[str]
+    tr_idx: np.ndarray, sequences: List[str],
+    target_multiplier: int = 0.15 # fraction of high-similarity band size
 ) -> np.ndarray:
     uniq_seqs, row2uniq = _unique_seqs([sequences[i] for i in tr_idx])
     # one clustering pass per threshold
@@ -137,7 +139,7 @@ def oversample_similarity_balanced_indices(
         rows_by_band[band_for[row2uniq[local_row]]].append(global_row)
 
     # target size = size of >=0.90 band (or max band if empty)
-    target = int(0.15 * (len(rows_by_band[HIGH_BAND]) or max(len(v) for v in rows_by_band.values())))
+    target = int(target_multiplier * (len(rows_by_band[HIGH_BAND]) or max(len(v) for v in rows_by_band.values())))
 
     rng = np.random.default_rng(SEED)
     new_idx: List[int] = []
