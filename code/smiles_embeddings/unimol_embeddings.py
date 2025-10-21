@@ -1,7 +1,7 @@
 import os
+import sys
 import pickle
 from pathlib import Path
-from config import ROOT
 from typing import List, Dict
 
 import numpy as np
@@ -9,7 +9,8 @@ from tqdm import tqdm
 from rdkit import Chem
 
 from unimol_tools import UniMolRepr
-
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from config import ROOT
 
 def canonicalize(smiles: str):
     try:

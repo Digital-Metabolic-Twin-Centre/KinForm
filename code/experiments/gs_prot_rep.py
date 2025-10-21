@@ -9,7 +9,7 @@ from pathlib import Path
 import ast
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
-from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CAT_PRED_DF, CONFIGS
+from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, ROOT, CONFIGS
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_features
 from utils.utils import normalize_logits
@@ -36,7 +36,6 @@ def load_data(dataset = "dlkcat"):
         smiles    = [d["Smiles"]    for d in raw]
         labels_np = np.array([math.log(float(d["Value"]), 10) for d in raw], dtype=np.float32)
     else:
-        from config import ROOT
         with open(ROOT / "data/EITLEM_data/KCAT/kcat_data.json", 'r') as fp:
             raw = json.load(fp)
 
@@ -110,7 +109,6 @@ def main(dataset):
             all_results[cfg["name"]].extend(results)
     flat_results = [entry for results in all_results.values() for entry in results]
     df_metrics = pd.DataFrame(flat_results)
-    from config import ROOT
     out_dir = ROOT / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
     df_metrics.to_csv(out_dir / f"prot_rep_gs.csv_{dataset}", index=False)

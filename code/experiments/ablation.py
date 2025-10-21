@@ -10,7 +10,6 @@ Train:
 Do 5-fold SE-CV
 """
 from pathlib import Path
-from config import ROOT
 import sys
 import json
 import math
@@ -21,7 +20,7 @@ from tqdm import tqdm
 import torch
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
-from config import CONFIGS_ABLATION, BS_PRED_DIRS, SEQ_LOOKUP
+from config import CONFIGS_ABLATION, BS_PRED_DIRS, SEQ_LOOKUP, ROOT
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks

@@ -1,8 +1,8 @@
 import os
+import sys
 import pickle
 import subprocess
 from pathlib import Path
-from config import ROOT
 from typing import List, Dict
 
 import numpy as np
@@ -10,7 +10,8 @@ import torch
 import pandas as pd
 from transformers import BertForMaskedLM, PreTrainedTokenizerFast
 from tqdm import tqdm
-
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from config import ROOT
 def extract_farm_embeddings(
     smiles_list: List[str],
     farm_model_name: str = "thaonguyen217/farm_molecular_representation",

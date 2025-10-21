@@ -21,7 +21,6 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from config import ROOT
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -36,6 +35,7 @@ from config import (  # type: ignore
     CONFIG_L,
     CONFIG_H,
     CONFIG_UniKP,
+    ROOT
 )
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
 from utils.smiles_features import smiles_to_vec
