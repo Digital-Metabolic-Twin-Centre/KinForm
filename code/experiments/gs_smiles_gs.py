@@ -18,8 +18,9 @@ everything else is identical to the previous working codebase.
 
 import json, math
 from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 from typing  import Dict
-
 import numpy  as np
 import pandas as pd
 
@@ -32,7 +33,7 @@ from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CONFIGS_SMILES_KCAT, CO
 from utils.sequence_features import sequences_to_feature_blocks
 from utils.smiles_features import smiles_to_vec
 from model_training import train_model
-from utils.pca import scale_and_reduce_blocks, split_blocks
+from utils.pca import make_design_matrices
 from utils.folds import get_folds
 
 TASKS: Dict[str, Dict] = {
@@ -71,7 +72,7 @@ def run_grid_search(task_name: str):
 
     raw = [d for d in raw
            if len(d[cfg_task["seq_key"]]) <= 1499
-           and cfg_task["record_filter"](d)]                  
+           and cfg_task["record_filter"](d)]
 
     sequences = [d[cfg_task["seq_key"]] for d in raw]
     smiles    = [d[cfg_task["smiles_key"]] for d in raw]
@@ -104,7 +105,7 @@ def run_grid_search(task_name: str):
 
     for split_mode in split_modes:
         print(f"\n===== {task_name.upper()} – {split_mode.upper()} =====")
-        fold_indices = get_folds(sequences, groups, mode=split_mode, n_splits=5)
+        fold_indices = get_folds(sequences, groups, method=split_mode, n_splits=5)
         CONFIGS_SMILES = CONFIGS_SMILES_KCAT if task_name == "kcat" else CONFIGS_SMILES_KM
         prog = tqdm(CONFIGS_SMILES, total=len(CONFIGS_SMILES),
                     ncols=120, desc=f"Configs ({split_mode})")
@@ -114,16 +115,19 @@ def run_grid_search(task_name: str):
 
             # 5.1 sequence blocks (depends on prot-rep mode but NOT on folds)
             blocks_all, block_names = sequences_to_feature_blocks(
-                sequences,
-                bs_df,
-                seq_to_id,
-                use_esmc = cfg["use_esmc"],
-                use_esm2 = cfg["use_esm2"],
-                use_t5   = cfg["use_t5"],
-                prot_rep_mode = cfg["prot_rep_mode"],
-                task = cfg_task["task_kw"],          # only change here
+                sequence_list=sequences,
+                binding_site_df=bs_df,
+                ec_num_df=None,
+                cat_sites_df=None,
+                seq_to_id=seq_to_id,
+                use_ec_logits=False,
+                use_esmc=cfg["use_esmc"],
+                use_esm2=cfg["use_esm2"],
+                use_t5=cfg["use_t5"],
+                t5_last_layer=cfg["t5_last_layer"],
+                prot_rep_mode=cfg["prot_rep_mode"],
+                task=cfg_task["task_kw"]
             )
-
             # 5.2 SMILES vectors for this config (cache by method)
             smi_method = cfg["smiles_method"]
             if smi_method not in smiles_vec_cache:
@@ -133,28 +137,12 @@ def run_grid_search(task_name: str):
             # 5.3 cross-validation
             fold_res = []
             for fold_id, (tr_idx, te_idx) in enumerate(fold_indices, 1):
-                # --- split blocks
-                blk_tr = [b[tr_idx] for b in blocks_all]
-                blk_te = [b[te_idx] for b in blocks_all]
-
-                # --- (optional) PCA per block-group
-                if cfg["use_pca"]:
-                    prog.set_description(f"[{split_mode}] {cfg['name']} – PCA")
-                    seq_tr, seq_te = scale_and_reduce_blocks(
-                        blk_tr, blk_te, block_names, n_comps=cfg["n_comps"]
-                    )
-                else:
-                    b_tr, g_tr = split_blocks(block_names, blk_tr)
-                    b_te, g_te = split_blocks(block_names, blk_te)
-                    seq_tr = np.concatenate(b_tr + g_tr, axis=1)
-                    seq_te = np.concatenate(b_te + g_te, axis=1)
-
-                # --- SMILES vectors
-                smi_tr, smi_te = smiles_vec[tr_idx], smiles_vec[te_idx]
-
-                # --- final feature matrix
-                X_tr = np.concatenate([smi_tr, seq_tr], axis=1)
-                X_te = np.concatenate([smi_te, seq_te], axis=1)
+                X_tr, X_te, _ = make_design_matrices(tr=tr_idx,
+                                                       te=te_idx,
+                                                       blocks_all=blocks_all,
+                                                       names=block_names,
+                                                       cfg=cfg,
+                                                       smiles_vec=smiles_vec)
                 y_tr, y_te = labels_np[tr_idx], labels_np[te_idx]
 
                 # --- model training

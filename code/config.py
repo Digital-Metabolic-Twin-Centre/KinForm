@@ -95,19 +95,22 @@ CONFIGS_SMILES_KCAT = [
         use_pca=True,
         n_comps=300,
         use_esmc=True, use_esm2=True, use_t5=True,
-        prot_rep_mode="both",
+        prot_rep_mode="binding+global",
         t5_last_layer=True,
     )
     for method in SMILES_REPS
 ] 
 CONFIGS_SMILES_KM = [
     dict(
-        name=f"{method}|ESMC(both)",
+        name=f"{method}|ESMC+ESM2+T5 (no PCA)",
         smiles_method=method,
         use_pca=False,
         n_comps=None,
-        use_esmc=True, use_esm2=False, use_t5=False,
-        prot_rep_mode="both",
+        prot_rep_mode="binding+global",
+        use_esmc=True,
+        use_esm2=True,
+        use_t5=True,
+        t5_last_layer=True,
     )
     for method in SMILES_REPS
 ]
