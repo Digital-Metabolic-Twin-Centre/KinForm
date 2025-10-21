@@ -242,7 +242,7 @@ for fold_no, (tr, te) in enumerate(pbar, 1):
     te = np.asarray(te, int)
 
     # baseline
-    X_tr, X_te = make_design_matrices(tr, te, blocks_all, names, cfg, smiles_vec)
+    X_tr, X_te,_ = make_design_matrices(tr, te, blocks_all, names, cfg, smiles_vec)
     y_tr, y_te = y_np[tr], y_np[te]
     model, y_pred, metrics, y_pred_matrix = train_model(X_tr, y_tr, X_te, y_te, fold=fold_no,return_one_pred=False)
     # y_pred_matrix is the predicted value of each tree on each test sample (y_pred_matrix[i] is the ith tree's prediction for all test samples)

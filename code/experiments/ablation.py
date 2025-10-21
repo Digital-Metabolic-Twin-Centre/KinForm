@@ -84,7 +84,7 @@ for cfg in CONFIGS_ABLATION:
         te = np.asarray(te, int)
 
         # baseline
-        X_tr, X_te = make_design_matrices(tr, te, blocks_all, names, cfg, smiles_vec)
+        X_tr, X_te,_ = make_design_matrices(tr, te, blocks_all, names, cfg, smiles_vec)
         y_tr, y_te = y_np[tr], y_np[te]
         model, yp, m1 = train_model(X_tr, y_tr, X_te, y_te, fold=fold_no)
         # instead of print

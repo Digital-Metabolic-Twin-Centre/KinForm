@@ -123,7 +123,7 @@ def main():
                 tr_idx = np.asarray(tr_idx, int)
                 te_idx = np.asarray(te_idx, int)
 
-                X_tr, X_te = make_design_matrices(tr_idx, te_idx, blocks_all, block_names, cfg, smiles_vec)
+                X_tr, X_te,_ = make_design_matrices(tr_idx, te_idx, blocks_all, block_names, cfg, smiles_vec)
 
                 y_tr, y_te = y_full[tr_idx], y_full[te_idx]
                 et_params = cfg.get("et_params", None)
@@ -158,7 +158,7 @@ def main():
                     print(f"Fold {fold_no} ({split_mode}): oversampled to {len(tr_bal)} rows from {len(tr_idx)} original rows using similarity-based oversampling.")
                     tr_bal = oversample_kcat_balanced_indices(tr_bal, y_full)
                     print(f"Fold {fold_no} ({split_mode}): oversampled to {len(tr_bal)} rows from {len(tr_idx)} original rows using kcat-based oversampling.")
-                    Xb_tr, Xb_te = make_design_matrices(tr_bal, te_idx, blocks_all, block_names, cfg, smiles_vec)
+                    Xb_tr, Xb_te,_ = make_design_matrices(tr_bal, te_idx, blocks_all, block_names, cfg, smiles_vec)
                     yb_tr = y_full[tr_bal]
                     tag = cfg_name + "(OS)"
                     model, y_pred_bal, m_bal = train_model(Xb_tr, yb_tr, Xb_te, y_te, fold=fold_no)

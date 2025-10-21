@@ -160,7 +160,7 @@ def objective(trial: optuna.Trial) -> float:
 
     # ── 3. Build design matrices ──────────────────────────────────── #
     cfg = {"use_pca": use_pca, "n_comps": n_comps, "prot_rep_mode": prot_rep}
-    X_tr, X_te = make_design_matrices(
+    X_tr, X_te,_ = make_design_matrices(
         train_idx, test_idx, blocks_all, names, cfg, smiles_vec
     )
 

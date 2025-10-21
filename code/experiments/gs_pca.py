@@ -86,7 +86,7 @@ def main(dataset):
             results = []
             for fold, (train_idx, test_idx) in enumerate(fold_indices, 1):
                 progress_bar.update(1)
-                X_tr, X_te = make_design_matrices(train_idx, test_idx, blocks_all, block_names, cfg, smiles_vec)
+                X_tr, X_te,_ = make_design_matrices(train_idx, test_idx, blocks_all, block_names, cfg, smiles_vec)
                 y_train, y_test = labels_np[train_idx], labels_np[test_idx]
                 progress_bar.set_description(f"[{split_mode}] Config: {cfg['name']} - Fitting model")
                 _, _, metrics = train_model(X_tr, y_train, X_te, y_test, fold=fold)

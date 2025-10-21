@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path
-from config import ROOT
 from typing import Dict, List
 import numpy as np
 import pandas as pd
@@ -25,7 +24,7 @@ import scipy.sparse as sp
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
-from config import SEQ_LOOKUP, BS_PRED_DIRS, CONFIG_L, CONFIG_H, CONFIG_UniKP
+from config import SEQ_LOOKUP, BS_PRED_DIRS, CONFIG_L, CONFIG_H, CONFIG_UniKP,ROOT
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
 from model_training import train_model
@@ -94,7 +93,7 @@ for cfg in CONFIGS:
     cfg_res: Dict[str, List[Dict]] = {}
 
     # fixed split ------------------------------------------------------
-    X_tr, X_te = make_design_matrices(pre_tr, pre_te, blocks_all, names, cfg, smiles_vec)
+    X_tr, X_te, _ = make_design_matrices(pre_tr, pre_te, blocks_all, names, cfg, smiles_vec)
     y_tr, y_te = y_np[pre_tr], y_np[pre_te]
     et_params = cfg.get("et_params", None)
     _, y_pred, m = train_model(X_tr, y_tr, X_te, y_te,fold=42, et_params=et_params)
@@ -128,7 +127,7 @@ for cfg in CONFIGS:
             te = np.asarray(te, int)
 
             # baseline
-            X_tr, X_te = make_design_matrices(tr, te, blocks_all, names, cfg, smiles_vec)
+            X_tr, X_te,_ = make_design_matrices(tr, te, blocks_all, names, cfg, smiles_vec)
             y_tr, y_te = y_np[tr], y_np[te]
             model, yp, m1 = train_model(X_tr, y_tr, X_te, y_te, fold=fold_no, et_params=et_params)
 
@@ -162,7 +161,7 @@ for cfg in CONFIGS:
                 print(f"Fold {fold_no} ({mode}): oversampled {len(tr_bal)} rows from {len(tr)} original rows. Using similarity-based oversampling.")
                 tr_bal = oversample_kcat_balanced_indices(tr_bal, y_np)
                 print(f"Fold {fold_no} ({mode}): oversampled {len(tr_bal)} rows from {len(tr)} original rows. Using kcat-based oversampling.")
-                Xb_tr, Xb_te = make_design_matrices(tr_bal, te, blocks_all, names, cfg, smiles_vec)
+                Xb_tr, Xb_te,_ = make_design_matrices(tr_bal, te, blocks_all, names, cfg, smiles_vec)
                 yb_tr = y_np[tr_bal]
                 model, yp2, m2 = train_model(Xb_tr, yb_tr, Xb_te, y_te, fold=fold_no)
                 tag = name + "(OS)" 

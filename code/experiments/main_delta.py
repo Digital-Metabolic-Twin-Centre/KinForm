@@ -367,7 +367,7 @@ def main() -> None:
             )
 
             # Build design matrices
-            X_tr, X_te = make_design_matrices(
+            X_tr, X_te,_ = make_design_matrices(
                 train_idx, test_idx, blocks, block_names, cfg, smiles_vec
             )
             y_tr = y_log[train_idx]
@@ -383,7 +383,7 @@ def main() -> None:
                 tr_bal = oversample_kcat_balanced_indices(tr_bal, y_log)
                 print(f"      Oversampling-2 (kcat)      : {len(tr_bal)} rows after second step")
 
-                X_tr_os, X_te = make_design_matrices(
+                X_tr_os, X_te,_ = make_design_matrices(
                     tr_bal, test_idx, blocks, block_names, cfg, smiles_vec
                 )
                 y_tr_os = y_log[tr_bal]
@@ -393,7 +393,7 @@ def main() -> None:
                 )
             else:
                 # ─────────── baseline training (UniKP etc.) ───────────
-                X_tr, X_te = make_design_matrices(
+                X_tr, X_te,_ = make_design_matrices(
                     train_idx, test_idx, blocks, block_names, cfg, smiles_vec
                 )
                 y_tr = y_log[train_idx]
