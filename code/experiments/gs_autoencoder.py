@@ -20,7 +20,7 @@ from tqdm import tqdm
 import sys 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from config import (
-    RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS,CAT_PRED_DF
+    RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CAT_PRED_DF, ROOT
 )  
 import ast
 from model_training import train_model
@@ -48,7 +48,7 @@ def load_data(dataset: str):
         labels_np = np.array([math.log(float(d["Value"]), 10) for d in raw],
                              dtype=np.float32)
     else:
-        with open("/home/saleh/KinForm-1/data/EITLEM_data/KCAT/kcat_data.json") as fp:
+        with open(ROOT / "data/EITLEM_data/KCAT/kcat_data.json") as fp:
             raw = json.load(fp)
 
         valid = [e for e in raw
@@ -182,7 +182,7 @@ def run_experiment(dataset: str):
             all_results.setdefault(cfg["name"], []).extend(results)
 
     # --- persist results --------------------------------------------------- #
-    out_dir = Path("/home/saleh/KinForm-1/results")
+    out_dir = ROOT / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     flat = [e for lst in all_results.values() for e in lst]

@@ -8,7 +8,7 @@ from tqdm import tqdm
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
-from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CONFIGS_PCA,CAT_PRED_DF
+from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CONFIGS_PCA, CAT_PRED_DF, ROOT
 import ast
 from model_training import train_model
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab 
@@ -30,7 +30,7 @@ def load_data(dataset = "dlkcat"):
         smiles    = [d["Smiles"]    for d in raw]
         labels_np = np.array([math.log(float(d["Value"]), 10) for d in raw], dtype=np.float32)
     else:
-        with open("/home/saleh/KinForm-1/data/EITLEM_data/KCAT/kcat_data.json", 'r') as fp:
+        with open(ROOT / "data/EITLEM_data/KCAT/kcat_data.json", 'r') as fp:
             raw = json.load(fp)
 
         def is_valid(e):
@@ -108,9 +108,11 @@ def main(dataset):
     flat_results = [entry for results in all_results.values() for entry in results]
 
     df = pd.DataFrame(flat_results)
-    df.to_csv(f"/home/saleh/KinForm-1/results/pca_gs_{dataset}.csv", index=False)
+    out_dir = ROOT / "results"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out_dir / f"pca_gs_{dataset}.csv", index=False)
     # Save full results dict as pickle
-    pd.to_pickle(all_results, f"/home/saleh/KinForm-1/results/pca_gs_{dataset}.pkl")
+    pd.to_pickle(all_results, out_dir / f"pca_gs_{dataset}.pkl")
 
 if __name__ == "__main__":
     main('dlkcat')  

@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from config import ROOT
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -446,9 +447,9 @@ def main() -> None:
                 })
 
     long_df = pd.DataFrame(long_rows)
-    out_long = Path("/home/saleh/KinForm-1/results/probe_enzyme_predictions_long.csv")
+    out_long = ROOT / "results/probe_enzyme_predictions_long.csv"
     long_df.to_csv(out_long, index=False)
-    print("\n✓ Long-format results written to:", out_long)
+    print("\n Long-format results written to:", out_long)
 
 
 if __name__ == "__main__":

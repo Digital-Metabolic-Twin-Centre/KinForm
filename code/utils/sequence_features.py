@@ -4,6 +4,11 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 from tqdm import tqdm
+
+# Determine repository root relative to this file
+# sequence_features.py is in code/utils/, so go up two levels to get to repo root
+ROOT = Path(__file__).resolve().parent.parent.parent
+
 # --------------------------------------------------------------------- #
 def _truncate_first_last(arr: np.ndarray,
                          keep: int = 1024) -> np.ndarray:
@@ -70,7 +75,7 @@ def _load_residue_embeddings(seq_id: str,
                              t5_last_layer: bool = False,
                              task: str,
                              ) -> np.ndarray:
-    base_dir = Path("/home/saleh/KinForm-1/results/embeddings")
+    base_dir = ROOT / "results/embeddings"
 
     if task == "kcat":
         t5_dir = base_dir / "prot_t5_layer_17" if not t5_last_layer else base_dir / "prot_t5_res"
@@ -120,7 +125,7 @@ def _try_load_precomputed_vectors(
     Tuple[bool, Optional[np.ndarray]]
         (success, vector) - success is True if vector was loaded successfully
     """
-    precomputed_root = Path("/home/saleh/KinForm-1/results/protein_embeddings")
+    precomputed_root = ROOT / "results/protein_embeddings"
     
     try:
         if vec_type == "mean":
@@ -347,7 +352,7 @@ def sequences_to_features(
     return np.vstack(features)
 
 def _load_single_embedding(seq_id: str, model: str, task: str, t5_last_layer: bool = False) -> np.ndarray:
-    base_dir = Path("/home/saleh/KinForm-1/results/embeddings")
+    base_dir = ROOT / "results/embeddings"
     if task == "kcat":
         layer_map = {
             "t5": base_dir / "prot_t5_layer_17" if not t5_last_layer else base_dir / "prot_t5_res",

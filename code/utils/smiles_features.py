@@ -7,6 +7,11 @@ import numpy as np
 from tqdm import tqdm
 import sys 
 from pathlib import Path
+
+# Determine repository root relative to this file
+# smiles_features.py is in code/utils/, so go up two levels to get to repo root
+ROOT = Path(__file__).resolve().parent.parent.parent
+
 # add parent dir to path
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
 # scikit-mol fingerprint transformers
@@ -58,7 +63,7 @@ def smiles_transformer(Smiles):
     return X
 
 def farm(Smiles):
-    with open("/home/saleh/KinForm-1/results/farm_embeddings/farm_embeddings.pkl", "rb") as f:
+    with open(ROOT / "results/farm_embeddings/farm_embeddings.pkl", "rb") as f:
         farm_dict = pickle.load(f)
 
     embeddings = []
@@ -99,7 +104,7 @@ def morgan_fingerprints(Smiles, radius=2, nBits=2048):
     return np.array(fingerprints)
 
 def molformer(Smiles):
-    with open("/home/saleh/KinForm-1/results/molformer_embeddings/molformer_embeddings.pkl", "rb") as f:
+    with open(ROOT / "results/molformer_embeddings/molformer_embeddings.pkl", "rb") as f:
         molformer_dict = pickle.load(f)
 
     embeddings = []
@@ -116,7 +121,7 @@ def unimol(Smiles):
     mode: 'cls' or 'mean'
     Returns array of shape [L, 768]
     """
-    with open("/home/saleh/KinForm-1/results/unimol_embeddings/unimol_embeddings.pkl", "rb") as f:
+    with open(ROOT / "results/unimol_embeddings/unimol_embeddings.pkl", "rb") as f:
         unimol_dict = pickle.load(f)
 
     embeddings = []

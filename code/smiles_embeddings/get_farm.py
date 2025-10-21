@@ -2,6 +2,7 @@ import os
 import pickle
 import subprocess
 from pathlib import Path
+from config import ROOT
 from typing import List, Dict
 
 import numpy as np
@@ -14,7 +15,7 @@ def extract_farm_embeddings(
     smiles_list: List[str],
     farm_model_name: str = "thaonguyen217/farm_molecular_representation",
     tmp_dir: str = "/tmp/farm_pipeline",
-    save_path: str = "/home/saleh/KinForm-1/results/farm_embeddings/farm_embeddings.pkl",
+    save_path: str = None,
 ) -> Dict[str, Dict[str, np.ndarray]]:
     """
     Full FARM embedding pipeline using SMILES list order.
@@ -62,6 +63,9 @@ def extract_farm_embeddings(
     model.eval()
     print(f"Loaded FARM model: {farm_model_name}")
     progress_bar = tqdm(total=len(smiles_list), desc="Processing SMILES", ncols=120)
+    if save_path is None:
+        save_path = str(ROOT / "results/farm_embeddings/farm_embeddings.pkl")
+
     if Path(save_path).exists():
         with open(save_path, "rb") as f:
             result_dict = pickle.load(f)
@@ -91,7 +95,7 @@ def extract_farm_embeddings(
 
 
 if __name__ == "__main__":
-    DATA_DIR     = Path("/home/saleh/KinForm-1")
+    DATA_DIR     = ROOT
     RAW_DLKCAT     = DATA_DIR / "data/dlkcat_raw.json"
     
     import json
@@ -123,7 +127,7 @@ if __name__ == "__main__":
     #         and "." not in d['smiles']]               
     # smiles    = [d["smiles"]                 for d in raw]
     # all_smiles = list(set(smiles))
-    KM_RAW_JSON = Path("/home/saleh/KinForm-1/data/EITLEM_data/KM/km_data.json")
+    KM_RAW_JSON = ROOT / "data/EITLEM_data/KM/km_data.json"
     with KM_RAW_JSON.open("r") as fp:
         raw = json.load(fp)
 
@@ -137,5 +141,5 @@ if __name__ == "__main__":
     extract_farm_embeddings(
         smiles_list=all_smiles,
         farm_model_name="thaonguyen217/farm_molecular_representation",
-        save_path="/home/saleh/KinForm-1/results/farm_embeddings/farm_embeddings.pkl",
+        save_path=None,
     )

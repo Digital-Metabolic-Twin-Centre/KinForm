@@ -28,7 +28,7 @@ from sklearn.model_selection import KFold, GroupKFold
 
 # --- project-specific imports (unchanged) -------------------------
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
-from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CONFIGS_SMILES_KCAT, CONFIGS_SMILES_KM
+from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CONFIGS_SMILES_KCAT, CONFIGS_SMILES_KM, ROOT
 from utils.sequence_features import sequences_to_feature_blocks
 from utils.smiles_features import smiles_to_vec
 from model_training import train_model
@@ -46,7 +46,7 @@ TASKS: Dict[str, Dict] = {
         task_kw    = "kcat",
     ),
     "km": dict(
-        raw_path   = Path("/home/saleh/KinForm-1/data/KM_data_raw.json"),
+        raw_path   = ROOT / "data/KM_data_raw.json",
         smiles_key = "smiles",
         seq_key    = "Sequence",
         value_key  = "log10_KM",
@@ -56,7 +56,7 @@ TASKS: Dict[str, Dict] = {
     ),
 }
 
-RESULTS_DIR = Path("/home/saleh/KinForm-1/results")
+RESULTS_DIR = ROOT / "results"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 def run_grid_search(task_name: str):

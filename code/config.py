@@ -1,8 +1,26 @@
+import os
 from pathlib import Path
-CONDA_EXE   = Path("/home/saleh/anaconda3/bin/conda")   # path to conda binary
+
+# Determine repository root relative to this config.py file
+# config.py is in code/, so go up one level to get to repo root
+ROOT = Path(__file__).resolve().parent.parent
+
+# Path to conda binary. We allow overriding via the CONDA_EXE env var so the
+# code is portable across machines. If not set, attempt to use a common
+# user-local path; if that doesn't exist the value will still be a Path but
+# callers that need conda should validate existence before invoking it.
+CONDA_EXE = Path(os.environ.get("CONDA_EXE", ""))
+if not CONDA_EXE or str(CONDA_EXE) == "":
+    # common user path fallback (non-fatal)
+    candidate = ROOT / "anaconda3" / "bin" / "conda"
+    if candidate.exists():
+        CONDA_EXE = candidate
+    else:
+        # final fallback to a typical system path; callers should verify
+        CONDA_EXE = Path("/usr/bin/conda")
 MMSEQS_ENV  = "mmseqs2_env"                                 # name of env containing mmseqs
 
-DATA_DIR     = Path("/home/saleh/KinForm-1")
+DATA_DIR     = ROOT
 RAW_DLKCAT     = DATA_DIR / "data/dlkcat_raw.json"
 BS_PRED_DIRS = [
     DATA_DIR / "results/binding_sites/prediction.tsv"

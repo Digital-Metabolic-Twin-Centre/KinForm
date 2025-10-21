@@ -44,7 +44,16 @@ from config import (
 )
 
 # EITLEM paths (match evaluation script)
-ROOT        = Path("/home/saleh/KinForm-1")
+from pathlib import Path
+import json
+import math
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import GroupKFold
+from tqdm import tqdm
+
+# Determine repository root relative to this file (utils/ is in code/, so go up two levels)
+ROOT = Path(__file__).resolve().parent.parent.parent
 EITLEM_DIR  = ROOT / "data/EITLEM_data"
 EITLEM_JSON = EITLEM_DIR / "KCAT/kcat_data.json"
 

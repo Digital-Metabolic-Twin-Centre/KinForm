@@ -22,7 +22,7 @@ from scipy.stats import norm as scipy_norm
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
-from config import SEQ_LOOKUP, BS_PRED_DIRS, CONFIG_L
+from config import SEQ_LOOKUP, BS_PRED_DIRS, CONFIG_L, ROOT
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
 from model_training import train_model
@@ -30,13 +30,12 @@ from utils.pca import make_design_matrices
 SEED = 42
 np.random.seed(SEED)
 # paths -------------------------------------------------------------- #
-ROOT        = Path("/home/saleh/KinForm-1")
 EITLEM_DIR  = ROOT / "data/EITLEM_data"
 JSON_FILE   = EITLEM_DIR / "KCAT/kcat_data.json"
 TRAIN_PAIRS = EITLEM_DIR / "KCAT/KCATTrainPairInfo"
 TEST_PAIRS  = EITLEM_DIR / "KCAT/KCATTestPairInfo"
 RESULTS_PKL = ROOT / "results/unikp_comp_eitlem.pkl"
-OUT_DIR = Path("/home/saleh/KinForm-1/results")
+OUT_DIR = ROOT / "results"
 
 def get_intervals(y_matrix, method='normal', alpha=0.1, centre="mean"):
     """

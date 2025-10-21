@@ -1,6 +1,7 @@
 import os
 import pickle
 from pathlib import Path
+from config import ROOT
 from typing import List, Dict
 
 import numpy as np
@@ -19,7 +20,7 @@ def canonicalize(smiles: str):
 
 def extract_unimol_embeddings(
     smiles_list: List[str],
-    save_path: str = "/home/saleh/KinForm-1/results/unimol_embeddings/unimol_embeddings.pkl",
+    save_path: str = None,
     model_name: str = "unimolv2",
     model_size: str = "1.1B"
 ) -> Dict[str, Dict[str, np.ndarray]]:
@@ -41,6 +42,10 @@ def extract_unimol_embeddings(
             count += 1
     print(f"Canonicalized {len(smiles_list) - count} out of {len(smiles_list)} SMILES.")
     assert len(smiles_list) == len(canon_smiles)
+
+    # Default save path (repo-relative) if not provided
+    if save_path is None:
+        save_path = str(ROOT / "results/unimol_embeddings/unimol_embeddings.pkl")
 
     # Load existing results if available
     if Path(save_path).exists():
@@ -110,7 +115,7 @@ if __name__ == "__main__":
     #         and "." not in d['smiles']]               
     # smiles    = [d["smiles"]                 for d in raw]
     # all_smiles = list(set(smiles))
-    KM_RAW_JSON = Path("/home/saleh/KinForm-1/data/EITLEM_data/KM/km_data.json")
+    KM_RAW_JSON = ROOT / "data/EITLEM_data/KM/km_data.json"
     with KM_RAW_JSON.open("r") as fp:
         raw = json.load(fp)
 
@@ -123,5 +128,5 @@ if __name__ == "__main__":
 
     extract_unimol_embeddings(
         smiles_list=all_smiles,
-        save_path="/home/saleh/KinForm-1/results/unimol_embeddings/unimol_embeddings.pkl"
+        save_path=None,
     )

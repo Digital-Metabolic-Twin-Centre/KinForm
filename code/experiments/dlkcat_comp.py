@@ -34,7 +34,7 @@ from config import (                                               # type: ignor
     SEQ_LOOKUP,
     BS_PRED_DIRS,
     CAT_PRED_DF,
-    CONFIG_L,CONFIG_H, CONFIG_UniKP
+    CONFIG_L,CONFIG_H, CONFIG_UniKP, ROOT
 )
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
@@ -52,7 +52,7 @@ np.random.seed(SEED)
 CONFIGS = [CONFIG_L, CONFIG_H, CONFIG_UniKP]
 
 # output ------------------------------------------------------------- #
-OUT_DIR = Path("/home/saleh/KinForm-1/results")
+OUT_DIR = ROOT / "results"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_PKL = OUT_DIR / "unikp_kineform_dlkcat_data.pkl"
 CONFIG_PARAM_KEYS = ["name", "use_pca", "n_comps", "prot_rep_mode", 

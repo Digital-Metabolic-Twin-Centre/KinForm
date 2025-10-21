@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
-from config import SEQ_LOOKUP, BS_PRED_DIRS, CONFIG_H, CONFIG_UniKP
+from config import SEQ_LOOKUP, BS_PRED_DIRS, CONFIG_H, CONFIG_UniKP, ROOT
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
 from utils.pca import split_blocks
@@ -14,7 +14,7 @@ CONFIG_H['name'] = "KinForm"
 CONFIGS = [CONFIG_H, CONFIG_UniKP]
     
 def main():
-    with open("/home/saleh/KinForm-1/data/KM_data_raw.json", 'r') as fp:
+    with open(ROOT / "data/KM_data_raw.json", 'r') as fp:
         raw = json.load(fp)
 
     raw = [d for d in raw if len(d["Sequence"]) <= 1499 and "." not in d["smiles"]]
@@ -99,7 +99,7 @@ def main():
             all_results[cfg["name"]].extend(results)
 
     # Save full results dict as pickle
-    pd.to_pickle(all_results, "/home/saleh/KinForm-1/results/unikp_comp_km.pkl")
+    pd.to_pickle(all_results, ROOT / "results/unikp_comp_km.pkl")
 
 if __name__ == "__main__":
     main()

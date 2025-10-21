@@ -41,6 +41,9 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ============================================================================
 
+# Determine repository root relative to this file (download_vecs.py is in code/utils/, so go up two levels)
+ROOT = Path(__file__).resolve().parent.parent.parent
+
 # Source directory on Google Drive
 GDRIVE_EMBEDDINGS_ROOT = Path("/home/saleh/gdrive/Recon4IMD/WP2_MetNetwork/T2.5_Kinetics/results/KinForm/embeddings")
 
@@ -48,7 +51,7 @@ GDRIVE_EMBEDDINGS_ROOT = Path("/home/saleh/gdrive/Recon4IMD/WP2_MetNetwork/T2.5_
 RCLONE_REMOTE = "gdrive:Recon4IMD/WP2_MetNetwork/T2.5_Kinetics/results/KinForm/embeddings"
 
 # Target directory for processed vectors
-LOCAL_RESULTS_ROOT = Path("/home/saleh/KinForm-1/results/protein_embeddings")
+LOCAL_RESULTS_ROOT = ROOT / "results/protein_embeddings"
 
 # Embedding models and their configurations
 EMBEDDING_MODELS = [
@@ -627,7 +630,7 @@ def load_dataframes(
     """
     if binding_site_path is None:
         # Default: look in results/binding_sites/
-        binding_site_path = Path("/home/saleh/KinForm-1/results/binding_sites")
+        binding_site_path = ROOT / "results/binding_sites"
     
     # Check if it's a directory or file
     if binding_site_path.is_dir():
@@ -701,7 +704,7 @@ Examples:
         default=None,
         help="Path to binding site predictions (directory or single file). "
              "If directory, all prediction*.tsv files will be concatenated. "
-             "Default: /home/saleh/KinForm-1/results/binding_sites/"
+             "Default: {ROOT / 'results/binding_sites'}/"
     )
     parser.add_argument(
         "--no-skip-existing",

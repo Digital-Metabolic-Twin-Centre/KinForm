@@ -16,7 +16,9 @@ SEED = 42
 rng  = np.random.default_rng(SEED)
 
 # ─────────────────────── paths / constants ───────────────── #
-ROOT        = Path("/home/saleh/KinForm-1")
+# Determine repository root relative to this file
+# hpo.py is in code/, so go up one level to get to repo root
+ROOT        = Path(__file__).resolve().parent.parent
 EITLEM_DIR  = ROOT / "data/EITLEM_data"
 JSON_FILE   = EITLEM_DIR / "KCAT/kcat_data.json"
 OUT_DIR     = ROOT / "results/hpo"
