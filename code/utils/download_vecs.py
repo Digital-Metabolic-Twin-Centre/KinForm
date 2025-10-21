@@ -60,7 +60,7 @@ EMBEDDING_MODELS = [
     "esmc_layer_24",
     "esmc_layer_32",
     "prot_t5_layer_19",
-    "prot_t5_res"
+    "prot_t5_last"
 ]
 
 # Batch size for processing (number of files per batch)

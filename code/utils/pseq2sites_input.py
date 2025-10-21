@@ -13,7 +13,7 @@ seq_ids = list(set(seq_ids))
 
 seq_dict = {sid: id_to_seq[sid] for sid in seq_ids}
 
-features_dir = Path("/home/msp/saleh/kinetics/results/embeddings/prot_t5_res")
+features_dir = Path("/home/msp/saleh/kinetics/results/embeddings/prot_t5_last")
 sequences = []
 features = []
 dummy_labels = []  # optional

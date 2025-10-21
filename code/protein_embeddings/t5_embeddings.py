@@ -16,7 +16,7 @@ Three operating modes (mutually exclusive):
 Embeddings are written under:
     KinForm/results/embeddings/
         prot_t5/                     (mean vectors, last layer)
-        prot_t5_res/                 (per-residue, layer n)
+        prot_t5_last/                 (per-residue, layer n)
         prot_t5_layer_{n}/           (alias for ^)
         prot_t5_all_layers/          (24×mean vectors)
 
@@ -66,7 +66,7 @@ def get_prot_t5_embeddings(
 
     paths = {
         "mean": os.path.join(base_path, "KinForm/results/embeddings/prot_t5"),
-        "residue": os.path.join(base_path, "KinForm/results/embeddings/prot_t5_res"),
+        "residue": os.path.join(base_path, "KinForm/results/embeddings/prot_t5_last"),
         "all_layers": os.path.join(base_path, "KinForm/results/embeddings/prot_t5_all_layers"),
     }
     # layer-specific directory

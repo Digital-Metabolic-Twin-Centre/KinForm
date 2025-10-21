@@ -30,7 +30,11 @@ BS_PRED_DIRS = [
 ]
 CAT_PRED_DF = DATA_DIR / "results/catalytic_sites/cat_sites.csv"
 SEQ_LOOKUP   = DATA_DIR / "results/sequence_id_to_sequence.pkl"
-
+COMPUTED_EMBEDDINGS_PATHS = {
+    "esm2": [ROOT / "results/protein_embeddings/esm2_layer_26", ROOT / "results/protein_embeddings/esm2_layer_29"],
+    "esmc": [ROOT / "results/protein_embeddings/esmc_layer_24", ROOT / "results/protein_embeddings/esmc_layer_32"],
+    "t5"  : [ROOT / "results/protein_embeddings/prot_t5_layer_19", ROOT / "results/protein_embeddings/prot_t5_last"],
+}
 # ---- Prot representation configs ----
 EMB_COMBOS = {
     "ESMC":               dict(use_t5=False, use_esmc=True,  use_esm2=False),

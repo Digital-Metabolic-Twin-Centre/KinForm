@@ -78,11 +78,11 @@ def _load_residue_embeddings(seq_id: str,
     base_dir = ROOT / "results/embeddings"
 
     if task == "kcat":
-        t5_dir = base_dir / "prot_t5_layer_17" if not t5_last_layer else base_dir / "prot_t5_res"
+        t5_dir = base_dir / "prot_t5_layer_17" if not t5_last_layer else base_dir / "prot_t5_last"
         esmc_layer_dir = base_dir / "esmc_layer_24"
         esm2_dir = base_dir / "esm2_layer_26"
     elif task == "KM":
-        t5_dir = base_dir / "prot_t5_layer_19" if not t5_last_layer else base_dir / "prot_t5_res"
+        t5_dir = base_dir / "prot_t5_layer_19" if not t5_last_layer else base_dir / "prot_t5_last"
         esmc_layer_dir = base_dir / "esmc_layer_32"
         esm2_dir = base_dir / "esm2_layer_29"
     else:
@@ -230,11 +230,11 @@ def sequences_to_features(
 
     # Determine which model layers to use based on task
     if task == "kcat":
-        t5_model = "prot_t5_layer_17" if not t5_last_layer else "prot_t5_res"
+        t5_model = "prot_t5_layer_17" if not t5_last_layer else "prot_t5_last"
         esmc_model = "esmc_layer_24"
         esm2_model = "esm2_layer_26"
     elif task == "KM":
-        t5_model = "prot_t5_layer_19" if not t5_last_layer else "prot_t5_res"
+        t5_model = "prot_t5_layer_19" if not t5_last_layer else "prot_t5_last"
         esmc_model = "esmc_layer_32"
         esm2_model = "esm2_layer_29"
     else:
@@ -355,13 +355,13 @@ def _load_single_embedding(seq_id: str, model: str, task: str, t5_last_layer: bo
     base_dir = ROOT / "results/embeddings"
     if task == "kcat":
         layer_map = {
-            "t5": base_dir / "prot_t5_layer_17" if not t5_last_layer else base_dir / "prot_t5_res",
+            "t5": base_dir / "prot_t5_layer_17" if not t5_last_layer else base_dir / "prot_t5_last",
             "esm2": base_dir / "esm2_layer_26",
             "esmc": base_dir / "esmc_layer_24"
         }
     elif task == "KM":
         layer_map = {
-            "t5": base_dir / "prot_t5_layer_19" if not t5_last_layer else base_dir / "prot_t5_res",
+            "t5": base_dir / "prot_t5_layer_19" if not t5_last_layer else base_dir / "prot_t5_last",
             "esm2": base_dir / "esm2_layer_29",
             "esmc": base_dir / "esmc_layer_32"
         }
@@ -451,13 +451,13 @@ def sequences_to_feature_blocks(
     # Determine which model layers to use based on task
     if task == "kcat":
         model_map = {
-            "T5": "prot_t5_layer_17" if not t5_last_layer else "prot_t5_res",
+            "T5": "prot_t5_layer_17" if not t5_last_layer else "prot_t5_last",
             "ESMC": "esmc_layer_24",
             "ESM2": "esm2_layer_26"
         }
     elif task == "KM":
         model_map = {
-            "T5": "prot_t5_layer_19" if not t5_last_layer else "prot_t5_res",
+            "T5": "prot_t5_layer_19" if not t5_last_layer else "prot_t5_last",
             "ESMC": "esmc_layer_32",
             "ESM2": "esm2_layer_29"
         }
