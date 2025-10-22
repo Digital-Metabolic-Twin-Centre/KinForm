@@ -9,7 +9,7 @@ from pathlib import Path
 import ast
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
-from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, ROOT, CONFIGS
+from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_PATH, ROOT, CONFIGS
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_features
 from utils.utils import normalize_logits
@@ -52,11 +52,10 @@ def main(dataset):
 
     seq_id_to_seq = pd.read_pickle(SEQ_LOOKUP)
     seq_to_id = {v: k for k, v in seq_id_to_seq.items()}
-    bs_dfs = [pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS]
+    binding_site_df = pd.read_csv(BS_PRED_PATH, sep="\t")
     # cat_df = pd.read_csv(CAT_PRED_DF)
     # cat_df['all_AS_probs'] = cat_df['all_AS_probs'].apply(ast.literal_eval)
     cat_df = None
-    binding_site_df = pd.concat(bs_dfs, ignore_index=True)
     print("Extracting SMILES vectors ...")
     smiles_vec = smiles_to_vec(smiles,method='smiles_transformer')
     groups = [seq_to_id[seq] for seq in sequences]

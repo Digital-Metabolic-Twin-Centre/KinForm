@@ -32,7 +32,7 @@ Download <https://zenodo.org/records/17400533>. This includes:
 After extraction, your tree should include:
 
 - `results/sequence_id_to_sequence.pkl`
-- `results/protein_embeddings/...` (e.g., `esm2_layer_26/`, `esmc_layer_32/`, `prot_t5_res/`)
+- `results/protein_embeddings/...` (e.g., `esm2_layer_26/`, `esmc_layer_32/`, `prot_t5_last/`)
 - `results/trained_models/...` (e.g `kcat_KinForm-L`, `kcat_KinForm-H`)
 - Optional (for inspection only): `results/binding_sites/prediction.tsv`, `prediction_2.tsv` … `prediction_7.tsv` (Pseq2Sites outputs for all proteins)
 

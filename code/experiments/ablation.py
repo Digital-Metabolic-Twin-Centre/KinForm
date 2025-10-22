@@ -20,7 +20,7 @@ from tqdm import tqdm
 import torch
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
-from config import CONFIGS_ABLATION, BS_PRED_DIRS, SEQ_LOOKUP, ROOT
+from config import CONFIGS_ABLATION, BS_PRED_PATH, SEQ_LOOKUP, ROOT
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
@@ -51,7 +51,7 @@ seq_to_id = {v: k for k, v in lookup.items()}
 groups = [seq_to_id[s] for s in seqs]
 
 # binding-site predictions
-bs_df = pd.concat([pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS], ignore_index=True)
+bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
 smiles_vec = smiles_to_vec(raw_smi, method="smiles_transformer")
 
 results_all = {}

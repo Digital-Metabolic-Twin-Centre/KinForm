@@ -8,7 +8,7 @@ from tqdm import tqdm
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
-from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CONFIGS_PCA, CAT_PRED_DF, ROOT
+from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_PATH, CONFIGS_PCA, CAT_PRED_DF, ROOT
 import ast
 from model_training import train_model
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab 
@@ -49,8 +49,7 @@ def main(dataset):
     seq_to_id = {v: k for k, v in seq_id_to_seq.items()}
     groups = [seq_to_id[seq] for seq in sequences]
 
-    bs_dfs = [pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS]
-    binding_site_df = pd.concat(bs_dfs, ignore_index=True)
+    binding_site_df = pd.read_csv(BS_PRED_PATH, sep="\t")
     # cat_df = pd.read_csv(CAT_PRED_DF)
     # cat_df['all_AS_probs'] = cat_df['all_AS_probs'].apply(ast.literal_eval)
     cat_df = None

@@ -22,12 +22,7 @@ MMSEQS_ENV  = "mmseqs2_env"                                 # name of env contai
 
 DATA_DIR     = ROOT
 RAW_DLKCAT     = DATA_DIR / "data/dlkcat_raw.json"
-BS_PRED_DIRS = [
-    DATA_DIR / "results/binding_sites/prediction.tsv"
-] + [
-    DATA_DIR / f"results/binding_sites/prediction_{i}.tsv"
-    for i in range(2, 8)
-]
+BS_PRED_PATH = DATA_DIR / "results/binding_sites/binding_sites_all.tsv"
 CAT_PRED_DF = DATA_DIR / "results/catalytic_sites/cat_sites.csv"
 SEQ_LOOKUP   = DATA_DIR / "results/sequence_id_to_sequence.pkl"
 COMPUTED_EMBEDDINGS_PATHS = {

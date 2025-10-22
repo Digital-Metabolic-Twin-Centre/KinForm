@@ -22,7 +22,7 @@ from scipy.stats import norm as scipy_norm
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir to path
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
-from config import SEQ_LOOKUP, BS_PRED_DIRS, CONFIG_L, ROOT
+from config import SEQ_LOOKUP, BS_PRED_PATH, CONFIG_L, ROOT
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
 from model_training import train_model
@@ -215,7 +215,7 @@ lookup = pd.read_pickle(SEQ_LOOKUP)
 seq_to_id = {v: k for k, v in lookup.items()}
 groups = [seq_to_id[s] for s in seqs]
 # binding-site predictions
-bs_df = pd.concat([pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS], ignore_index=True)
+bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
 smiles_vec = smiles_to_vec(raw_smi, method="smiles_transformer")
 
 cfg = CONFIG_L

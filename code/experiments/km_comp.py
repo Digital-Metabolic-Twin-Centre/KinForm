@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
-from config import SEQ_LOOKUP, BS_PRED_DIRS, CONFIG_H, CONFIG_UniKP, ROOT
+from config import SEQ_LOOKUP, BS_PRED_PATH, CONFIG_H, CONFIG_UniKP, ROOT
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
 from utils.pca import make_design_matrices
@@ -28,8 +28,7 @@ def main():
     seq_to_id = {v: k for k, v in seq_id_to_seq.items()}
     groups = [seq_to_id[seq] for seq in sequences]
 
-    bs_dfs = [pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS]
-    binding_site_df = pd.concat(bs_dfs, ignore_index=True)
+    binding_site_df = pd.read_csv(BS_PRED_PATH, sep="\t")
 
     split_modes = ["groupkfold", "kfold"]
     all_results = {}

@@ -29,7 +29,7 @@ from sklearn.model_selection import KFold, GroupKFold
 
 # --- project-specific imports (unchanged) -------------------------
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  
-from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CONFIGS_SMILES_KCAT, CONFIGS_SMILES_KM, ROOT
+from config import RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_PATH, CONFIGS_SMILES_KCAT, CONFIGS_SMILES_KM, ROOT
 from utils.sequence_features import sequences_to_feature_blocks
 from utils.smiles_features import smiles_to_vec
 from model_training import train_model
@@ -88,9 +88,8 @@ def run_grid_search(task_name: str):
 
     # ------------------------------------------------------------------
     # 3. Binding-site predictions dataframe 
-    # ------------------------------------------------------------------
-    bs_df = pd.concat([pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS],
-                      ignore_index=True)
+    # -------------------------------------------------------------------
+    bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
 
     # ------------------------------------------------------------------
     # 4. Pre-compute SMILES vectorisation once – independent of folds

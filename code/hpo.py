@@ -34,7 +34,7 @@ from smiles_embeddings.smiles_transformer.build_vocab import WordVocab  # noqa: 
 from utils.smiles_features    import smiles_to_vec
 from utils.sequence_features  import sequences_to_feature_blocks
 from utils.pca                import make_design_matrices
-from config                   import SEQ_LOOKUP, BS_PRED_DIRS
+from config                   import SEQ_LOOKUP, BS_PRED_PATH
 
 # ────────────────────── data utilities ───────────────────── #
 def load_raw() -> Tuple[List[str], List[str], np.ndarray]:
@@ -63,8 +63,7 @@ print("→ Pre-computing feature blocks …")
 seqs, smiles, y_all = load_raw()
 groups              = make_groups(seqs)
 
-bs_df       = pd.concat([pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS],
-                        ignore_index=True)
+bs_df       = pd.read_csv(BS_PRED_PATH, sep="\t")
 smiles_vec  = smiles_to_vec(smiles, method="smiles_transformer")
 
 blocks_all, names = sequences_to_feature_blocks(

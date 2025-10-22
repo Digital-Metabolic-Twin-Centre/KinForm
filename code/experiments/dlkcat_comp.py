@@ -32,7 +32,7 @@ from smiles_embeddings.smiles_transformer.build_vocab import WordVocab
 from config import (                                               # type: ignore
     RAW_DLKCAT,
     SEQ_LOOKUP,
-    BS_PRED_DIRS,
+    BS_PRED_PATH,
     CAT_PRED_DF,
     CONFIG_L,CONFIG_H, CONFIG_UniKP, ROOT
 )
@@ -78,7 +78,8 @@ def main():
     # smiles_vec = smiles_to_vec(smiles, method="smiles_transformer")
 
     # binding-site predictions (pre-computed)
-    bs_df = pd.concat([pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS], ignore_index=True)
+    bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
+
     smiles_vec = smiles_to_vec(raw_smiles, method="smiles_transformer")
     # cat_df = pd.read_csv(CAT_PRED_DF)
     # cat_df['all_AS_probs'] = cat_df['all_AS_probs'].apply(ast.literal_eval)

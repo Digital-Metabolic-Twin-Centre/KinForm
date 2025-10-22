@@ -31,7 +31,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))  # add parent dir t
 from config import (  # type: ignore
     RAW_DLKCAT,
     SEQ_LOOKUP,
-    BS_PRED_DIRS,
+    BS_PRED_PATH,
     CONFIG_L,
     CONFIG_H,
     CONFIG_UniKP,
@@ -302,7 +302,7 @@ def main() -> None:
 
     seq_to_id = {v: k for k, v in pd.read_pickle(SEQ_LOOKUP).items()}
 
-    bs_df = pd.concat([pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS], ignore_index=True)
+    bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
     smiles_vec = smiles_to_vec(smiles_all, method="smiles_transformer")
     # ─────────────── estimate number of sequences to drop ─────────────── #
     mid_id = 0.10

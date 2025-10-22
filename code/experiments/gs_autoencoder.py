@@ -20,7 +20,7 @@ from tqdm import tqdm
 import sys 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from config import (
-    RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_DIRS, CAT_PRED_DF, ROOT
+    RAW_DLKCAT, SEQ_LOOKUP, BS_PRED_PATH, CAT_PRED_DF, ROOT
 )  
 import ast
 from model_training import train_model
@@ -108,8 +108,7 @@ def run_experiment(dataset: str):
     groups = [seq_to_id[s] for s in sequences]
 
     # concatenated binding-site predictions
-    bs_dfs = [pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS]
-    bs_df  = pd.concat(bs_dfs, ignore_index=True)
+    bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
     cat_df = pd.read_csv(CAT_PRED_DF)
     cat_df['all_AS_probs'] = cat_df['all_AS_probs'].apply(ast.literal_eval)
     print("Vectorising SMILES …")
