@@ -630,27 +630,12 @@ def load_dataframes(
     """
     if binding_site_path is None:
         # Default: look in results/binding_sites/
-        binding_site_path = ROOT / "results/binding_sites"
+        binding_site_path = ROOT / "results/binding_sites/binding_sites_all.tsv"
     
-    # Check if it's a directory or file
-    if binding_site_path.is_dir():
-        # Load and concatenate all prediction*.tsv files
-        candidates = sorted(binding_site_path.glob("prediction*.tsv"))
-        if candidates:
-            logger.info(f"Found {len(candidates)} binding site prediction files in {binding_site_path}")
-            logger.info(f"Files: {', '.join(p.name for p in candidates)}")
-            binding_site_dfs = [pd.read_csv(p, sep="\t") for p in candidates]
-            binding_site_df = pd.concat(binding_site_dfs, ignore_index=True)
-        else:
-            logger.warning(f"No binding site prediction files found in {binding_site_path}")
-            binding_site_df = pd.DataFrame(columns=["PDB", "Pred_BS_Scores"])
-    elif binding_site_path.exists():
+    if binding_site_path.exists():
         # Single file
         logger.info(f"Using binding site file: {binding_site_path}")
-        if binding_site_path.suffix == ".tsv":
-            binding_site_df = pd.read_csv(binding_site_path, sep="\t")
-        else:
-            binding_site_df = pd.read_csv(binding_site_path)
+        binding_site_df = pd.read_csv(binding_site_path, sep="\t")
     else:
         logger.warning(f"Binding site path not found: {binding_site_path}")
         binding_site_df = pd.DataFrame(columns=["PDB", "Pred_BS_Scores"])
