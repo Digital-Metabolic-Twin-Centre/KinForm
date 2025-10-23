@@ -36,6 +36,8 @@ import argparse
 import json
 import math
 import os
+import subprocess
+import tempfile
 import warnings
 from pathlib import Path
 from typing import Dict, Tuple, List
@@ -49,12 +51,14 @@ from sklearn.metrics import r2_score, mean_squared_error
 warnings.filterwarnings("ignore", category=UserWarning, message=".*enable_nested_tensor.*")
 
 # ──────────────────────────── local imports ───────────────────────── #
-from config import CONFIG_H, CONFIG_L, CONFIG_UniKP
+from config import CONFIG_H, CONFIG_L, CONFIG_UniKP, COMPUTED_EMBEDDINGS_PATHS, BS_PRED_PATH
 from smiles_embeddings.smiles_transformer.build_vocab import WordVocab 
 from utils.smiles_features import smiles_to_vec
 from utils.sequence_features import sequences_to_feature_blocks
 from utils.pca import make_design_matrices
 from model_training import train_model
+from pseq2sites.get_sites import get_sites
+from utils.main_utils.compute_embs import embeddings_exist, _compute_all_emb
 
 # Global paths - relative to repository root
 # This script is in code/, so go up one level to get to repo root
@@ -62,13 +66,6 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_KCAT = ROOT / "data/EITLEM_data/KCAT/kcat_data.json"
 DATA_KM   = ROOT / "data/KM_data_raw.json"
 SEQ_LOOKUP   = ROOT / "results/sequence_id_to_sequence.pkl"
-BS_PRED_DIRS = [
-    ROOT / "results/binding_sites/prediction.tsv"
-] + [
-    ROOT / f"results/binding_sites/prediction_{i}.tsv"
-    for i in range(2, 8)
-]
-
 # ------------------------------------------------------------------- #
 CONFIG_MAP = {
     "KinForm-H": CONFIG_H,
@@ -78,6 +75,86 @@ CONFIG_MAP = {
 
 
 # ═════════════════════════ data loading ════════════════════════════ #
+def _get_or_create_seq_id(sequence, seq_id_to_sequence, sequence_to_seq_id):
+    if sequence in sequence_to_seq_id:
+        return sequence_to_seq_id[sequence], seq_id_to_sequence, sequence_to_seq_id, False
+    else:
+        print(f"↪ New sequence encountered – assigning new ID.")
+        new_id = f"Sequence {len(sequence_to_seq_id)+1}"
+        i = 2
+        while new_id in seq_id_to_sequence:
+            new_id = f"Sequence {len(sequence_to_seq_id)+i}"
+            i += 1
+        sequence_to_seq_id[sequence] = new_id
+        seq_id_to_sequence[new_id] = sequence
+        return new_id, seq_id_to_sequence, sequence_to_seq_id, True
+
+def compute_embeddings(sequences: List[str]) -> Tuple[Dict[str, bool], Dict[str, str]]:
+    """
+    Input:
+        sequences : List[str]
+            List of protein sequences
+    Output:
+        computed : Dict[str, bool]
+            Dictionary indicating whether embeddings were computed for each sequence
+        reasons : Dict[str, str]
+            Dictionary of reasons for computation (e.g., missing embeddings)
+    """
+    # Check which embeddings are missing
+    seq_id_to_sequence = pd.read_pickle(SEQ_LOOKUP)
+    sequence_to_seq_id = {v: k for k, v in seq_id_to_sequence.items()}
+    seq_ids = []
+    changed_list = []
+    for seq in sequences:
+        seq_id, seq_id_to_sequence, sequence_to_seq_id, changed = _get_or_create_seq_id(
+            seq, seq_id_to_sequence, sequence_to_seq_id
+        )
+        seq_ids.append(seq_id)
+        changed_list.append(changed)
+    if any(changed_list):
+        print("↪ New sequences were added to the sequence ID lookup. Updating cache...")
+        pd.to_pickle(seq_id_to_sequence, SEQ_LOOKUP)
+
+    computed_dict = {seq_id: None for seq_id in seq_ids}
+    reasons = {seq_id: [] for seq_id in seq_ids}
+
+    exists_dict = embeddings_exist(seq_ids)
+    esm2_exists, esmc_exists, t5_exists = (
+        exists_dict["esm2"],
+        exists_dict["esmc"],
+        exists_dict["t5"],
+    )
+    if (all(esm2_exists) and all(esmc_exists) and all(t5_exists)):
+        print("✓ All embeddings already exist. No computation needed.")
+        return [True] * len(sequences)
+    print(f"Missing {sum(not x for x in esm2_exists)} ESM-2 embeddings.")
+    print(f"Missing {sum(not x for x in esmc_exists)} ESM-C embeddings.")
+    print(f"Missing {sum(not x for x in t5_exists)} Prot-T5 embeddings.")
+    # load binding site DF
+    bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
+    bs_df_ids = bs_df['PDB'].tolist()
+    missing_bs_seqs = set(seq_ids) - set(bs_df_ids)
+    print(f"Missing binding-site predictions for {len(missing_bs_seqs)} sequences.")
+    # compute ProtT5 embeddings (in batches):
+    bs_computed, bs_reasons, _ = get_sites(missing_bs_seqs, seq_id_to_sequence, bs_df, save_path=BS_PRED_PATH, return_prot_t5=False)
+    # update bool list
+    for seq_id in bs_computed:
+        computed_dict[seq_id] = bs_computed[seq_id]
+        reasons[seq_id].append(bs_reasons[seq_id])
+    (esmc_computed, esmc_reasons, esm2_computed,
+     esm2_reasons, t5_computed, t5_reasons) = _compute_all_emb(sequences, seq_id_to_sequence)
+    for seq_id in seq_ids:
+        if not esm2_exists[seq_ids.index(seq_id)]:
+            computed_dict[seq_id] = esm2_computed[seq_id]
+            reasons[seq_id].append(esm2_reasons[seq_id])
+        if not esmc_exists[seq_ids.index(seq_id)]:
+            computed_dict[seq_id] = esmc_computed[seq_id]
+            reasons[seq_id].append(esmc_reasons[seq_id])
+        if not t5_exists[seq_ids.index(seq_id)]:
+            computed_dict[seq_id] = t5_computed[seq_id]
+            reasons[seq_id].append(t5_reasons[seq_id])
+    return computed_dict, reasons
+
 def load_kcat(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return sequences, smiles and log10(kcat) as numpy arrays."""
     data_file = data_path if data_path else DATA_KCAT
@@ -90,8 +167,14 @@ def load_kcat(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np
             for r in raw if len(r["sequence"]) <= 1499 and float(r["value"]) > 0]
     seqs, smis, y = zip(*valid)
     y = np.array([math.log(v, 10) for v in y], dtype=np.float32)
+    emb_computed, reasons = compute_embeddings(list(seqs))
+    if not all(emb_computed):
+        failed_seqs = [seqs[i] for i, v in enumerate(emb_computed) if not v]
+        print(f"Warning: Embedding computation failed for {len(failed_seqs)} sequences.")
+        for seq_id, reason_list in reasons.items():
+            if any(reason_list):
+                print(f"  - Sequence ID {seq_id}: {'; '.join([r for r in reason_list if r])}")
     return np.asarray(seqs), np.asarray(smis), y
-
 
 def load_km(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return sequences, smiles and log10(KM) as numpy arrays."""
@@ -104,6 +187,13 @@ def load_km(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.n
     valid = [(r["Sequence"], r["smiles"], float(r["log10_KM"]))
             for r in raw if len(r["Sequence"]) <= 1499 and "." not in r["smiles"]]
     seqs, smis, y = zip(*valid)
+    emb_computed, reasons = compute_embeddings(list(seqs))
+    if not all(emb_computed):
+        failed_seqs = [seqs[i] for i, v in enumerate(emb_computed) if not v]
+        print(f"Warning: Embedding computation failed for {len(failed_seqs)} sequences.")
+        for seq_id, reason_list in reasons.items():
+            if any(reason_list):
+                print(f"  - Sequence ID {seq_id}: {'; '.join([r for r in reason_list if r])}")
     return np.asarray(seqs), np.asarray(smis), np.asarray(y, dtype=np.float32)
 
 
@@ -143,7 +233,7 @@ def build_design_matrix(
     Uses make_design_matrices which handles PCA internally.
     """
     # Binding-site predictions
-    bs_df = pd.concat([pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS], ignore_index=True)
+    bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
 
     # map sequence → id (for GroupKFold compatibility, but we only need ids here)
     seq_lookup = pd.read_pickle(SEQ_LOOKUP)
@@ -191,10 +281,8 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
         seq_lookup = pd.read_pickle(SEQ_LOOKUP)
         seq_to_id = {v: k for k, v in seq_lookup.items()}
         groups = [seq_to_id[s] for s in seqs]
-        
         # Binding-site predictions (load once)
-        bs_df = pd.concat([pd.read_csv(p, sep="\t") for p in BS_PRED_DIRS], ignore_index=True)
-        
+        bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
         # Build feature blocks once
         blocks_all, block_names = sequences_to_feature_blocks(
             sequence_list=seqs,
@@ -370,3 +458,12 @@ if __name__ == "__main__":
         if args.save_results is None:
             p.error("--save_results is required in predict mode")
         predict(args.task, args.model_config, model_dir, args.save_results, args.data_path)
+
+"""
+TODO:
+- If protein embeddings OR binding-site preds missing, compute on the fly (with caching)
+    - for each missing protein (or in batch):
+        - compute embedding from each PLLM (if missing) --subprocess
+        - compute binding-site predictions (if missing) --subprocess
+        - Cache mean vector and weighted mean vector
+"""
