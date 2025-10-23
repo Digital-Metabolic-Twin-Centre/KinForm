@@ -9,7 +9,7 @@ import pickle
 # Silence warnings
 warnings.filterwarnings("ignore", category=UserWarning, message=".*enable_nested_tensor.*")
 # ──────────────────────────── local imports ───────────────────────── #
-from config import COMPUTED_EMBEDDINGS_PATHS, ROOT
+from config import COMPUTED_EMBEDDINGS_PATHS, ROOT, ESM_BIN, ESMC_BIN, T5_BIN
 def _embs_exist(seq_id, pllm_name):
     embeddings_paths = COMPUTED_EMBEDDINGS_PATHS[pllm_name]
     for dir_path in embeddings_paths:
@@ -57,7 +57,7 @@ def _compute_esm2(sequences: List[str], seq_id_to_sequence: Dict[str, str]) -> T
         
         weights_file = ROOT / "results" / "binding_sites" / "binding_sites_all.tsv"
         setting = "mean+weighted"
-        command = ["/home/saleh/anaconda3/envs/esm/bin/python", str(script_path),
+        command = [ESM_BIN, str(script_path),
                    "--seq_file", str(temp_seq_file_path),
                    "--models", "esm2",
                    "--setting", setting,
@@ -91,7 +91,7 @@ def _compute_t5(sequences: List[str], seq_id_to_sequence: Dict[str, str]) -> Tup
                 temp_seq_file.write(f"{seq_id}\n")
         weights_file = ROOT / "results" / "binding_sites" / "binding_sites_all.tsv"
         setting = "mean+weighted"
-        command = ["/home/saleh/anaconda3/envs/prot_t5/bin/python", str(script_path),
+        command = [T5_BIN, str(script_path),
                    "--seq_file", str(temp_seq_file_path),
                    "--setting", setting,
                    "--weights_file", str(weights_file),
@@ -129,7 +129,7 @@ def _compute_esmc(sequences: List[str], seq_id_to_sequence: Dict[str, str]) -> T
         
         weights_file = ROOT / "results" / "binding_sites" / "binding_sites_all.tsv"
         setting = "mean+weighted"
-        command = ["/home/saleh/anaconda3/envs/esmc/bin/python", str(script_path),
+        command = [ESMC_BIN, str(script_path),
                    "--seq_file", str(temp_seq_file_path),
                    "--models", "esmc",
                    "--setting", setting,

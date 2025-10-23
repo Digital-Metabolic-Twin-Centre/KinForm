@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from config import CONDA_EXE, ROOT
+from config import ROOT, PSEQ2SITES_BIN
 
 def _populate_initial(all_seq_ids, already_processed_ids, id_to_seq):
     missing_seq_ids = [sid for sid in all_seq_ids if sid not in already_processed_ids]
@@ -67,7 +67,7 @@ def get_sites(
         # generate features
         script_path = ROOT / "code" / "pseq2sites" / "Pseq2Sites" / "gen_features.py"
         gen_feat_cmd = [
-            "/home/saleh/anaconda3/envs/pseq2sites/bin/python", str(script_path),
+            PSEQ2SITES_BIN, str(script_path),
             "--input", str(input_tsv_path),
             "--output", str(features_output_path),
             "--labels", "False"
@@ -103,7 +103,7 @@ def get_sites(
     # run predictor
     prediction_script_path = ROOT / "code" / "pseq2sites" / "Pseq2Sites" / "test.py"
     predict_cmd = [
-        "/home/saleh/anaconda3/envs/pseq2sites/bin/python", str(prediction_script_path),
+        PSEQ2SITES_BIN, str(prediction_script_path),
         "--config", str(config_path),
         "--labels", "False"
     ]

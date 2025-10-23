@@ -58,7 +58,7 @@ from utils.sequence_features import sequences_to_feature_blocks
 from utils.pca import make_design_matrices
 from model_training import train_model
 from pseq2sites.get_sites import get_sites
-from utils.main_utils.compute_embs import embeddings_exist, _compute_all_emb
+from code.utils.compute_embs import embeddings_exist, _compute_all_emb
 
 # Global paths - relative to repository root
 # This script is in code/, so go up one level to get to repo root

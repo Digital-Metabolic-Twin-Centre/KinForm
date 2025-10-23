@@ -73,46 +73,101 @@ Custom JSON format
 
 Path B — New proteins or full regeneration
 -----------------------------------------
-Use this if you want to run on sequences not in the bundle, or rebuild all features locally.
+Use this if you want to train or predict using with new sequences, or rebuild all features locally. The pipeline generates embeddings and binding-site predictions then runs the training/prediction task.
 
-### About `results/sequence_id_to_sequence.pkl`
+### Prerequisites
 
-- This file maps a stable sequence ID (e.g., "Sequence 11894") to its amino-acid string.
-- It is included in the Zenodo bundle.
-- If you have new sequences, append entries to this mapping so that downstream scripts can locate embeddings by ID.
+#### 1) Initialize binding-site cache
 
-### 1) Add or verify your sequence IDs
+Create or download `results/binding_sites/binding_sites_all.tsv`:
 
-- Place IDs (one per line) in `data/unique_seq_ids.txt`.
-- Ensure each ID exists in `results/sequence_id_to_sequence.pkl`; if not, add it.
+- **Option A (recommended):** Download the precomputed binding sites from [Zenodo](https://zenodo.org/records/17400533)
+- **Option B:** Initialize an empty cache file:
+  ```bash
+  mkdir -p results/binding_sites
+  echo -e "PDB\tPred_BS_Scores" > results/binding_sites/binding_sites_all.tsv
+  ```
 
-### 2) Generate protein embeddings (if not using the precomputed set)
+#### 2) Set up conda environments
 
+The pipeline requires four separate Python environments for different embedding models. Create them as follows:
+
+**ESM environment** (for ESM2 embeddings; Python 3.7):
 ```bash
-cd code/protein_embeddings
+conda create --name esm python=3.7 -y
+conda activate esm
+pip install torch fair-esm pandas tqdm
+conda deactivate
+```
+See [ESM repository](https://github.com/facebookresearch/esm) for more details.
 
-# ESM2 layers 26/29 and ESMC layers 24/32
-python prot_embeddings.py
+**ESMC environment** (for ESMC embeddings; Python 3.12):
+```bash
+conda create --name esmc python=3.12 -y
+conda activate esmc
+pip install esm pandas tqdm
+conda deactivate
+```
+See [ESMC repository](https://github.com/evolutionaryscale/esm) for more details.
 
-# ProtT5 residue embeddings (layer 19 and last layer)
-python t5_embeddings.py
+**ProtT5 environment** (for ProtT5 embeddings; Python 3.9):
+```bash
+conda create --name prott5 python=3.9 -y
+conda activate prott5
+pip install torch transformers sentencepiece pandas tqdm
+conda deactivate
+```
+See [ProtTrans repository](https://github.com/agemagician/ProtTrans?tab=readme-ov-file) for more details.
+
+**Pseq2Sites environment** (for binding-site prediction; Python 3.7):
+```bash
+conda create --name pseq2sites python=3.7 -y
+conda activate pseq2sites
+pip install torch transformers sentencepiece biopython==1.79 rdkit-pypi==2021.3.1 openbabel-wheel pandas tqdm
+conda deactivate
 ```
 
-Embeddings are saved under `results/embeddings/` (these are full per-residue embeddings for each protein).
+#### 3) Configure environment paths
 
-### 3) Generate binding-site predictions (if not using the precomputed set)
+Edit `code/config.py` to specify the Python binary paths for each environment. Locate each binary using:
 
-Use Pseq2Sites (https://github.com/Blue1993/Pseq2Sites) and save TSV outputs under `results/binding_sites/`. You can use one TSV file or multiple (e.g., if running Pseq2Sites in batches).
+```bash
+conda activate <env_name>
+which python
+conda deactivate
+```
 
-TSV format:
-- Column 1: `PDB` (sequence ID matching your `results/sequence_id_to_sequence.pkl` keys)
-- Column 2: `Pred_BS_Scores` (string representation of a list with L values, where L = sequence length; the i-th value is the probability that residue i is in the binding site)
+Then update `config.py`:
 
-Example files: `prediction.tsv`, `prediction_2.tsv`, … `prediction_7.tsv`
+```python
+# Python bin paths
+ESM_BIN = "/path/to/anaconda3/envs/esm/bin/python"
+ESMC_BIN = "/path/to/anaconda3/envs/esmc/bin/python"
+T5_BIN = "/path/to/anaconda3/envs/prott5/bin/python"
+PSEQ2SITES_BIN = "/path/to/anaconda3/envs/pseq2sites/bin/python"
+```
 
-### 4) Train and predict
+### Running the pipeline
 
-- Use the same commands as in Path A.
+Once the environments are configured, the pipeline handles all feature generation. 
+
+```bash
+cd code
+# Train with custom data (see "Custom JSON format" above for data format)
+python main.py --mode train --task kcat --model_config KinForm-L --data_path ../data/my_data.json
+
+# Predict with custom data
+python main.py --mode predict --task KM --model_config KinForm-H --save_results ../predictions/my_predictions.csv --data_path ../data/my_data.json
+```
+
+The pipeline will:
+1. Check for existing embeddings in the cache
+2. Generate missing protein embeddings using the appropriate environment (ESM, ESMC, ProtT5)
+3. Generate binding-site predictions using Pseq2Sites (for weighted embeddings)
+4. Cache computed features on disk ("results/protein_embeddings" for embeddings and "results/binding_sites/binding_sites_all.tsv" for binding site predictions.)
+5. Proceed with training or prediction
+
+**Note:** First-time runs may take significant time to compute embeddings for all proteins if no cuda/large dataset. Subsequent runs will use cached embeddings and complete much faster.
 
 
 Acknowledgments
@@ -127,7 +182,7 @@ This work builds upon and benefits from several excellent open-source projects:
 ### Protein Embedding Models
 - **[ESM (Facebook Research)](https://github.com/facebookresearch/esm)** – ESM2 protein language models
 - **[ESM (Evolutionary Scale)](https://github.com/evolutionaryscale/esm)** – ESMC protein embeddings
-- **[ProstT5](https://github.com/mheinzinger/ProstT5)** – ProtT5 protein embeddings
+- **[ProtTrans](https://github.com/agemagician/ProtTrans)** – ProtT5 protein embeddings
 
 ### Related Work
 We also acknowledge the following projects that helped us understand the task of kinetic parameter prediction:
