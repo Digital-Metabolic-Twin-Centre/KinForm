@@ -126,6 +126,7 @@ conda activate pseq2sites
 pip install torch transformers sentencepiece biopython==1.79 rdkit-pypi==2021.3.1 openbabel-wheel pandas tqdm
 conda deactivate
 ```
+See [Pseq2Sites repository](https://github.com/Blue1993/Pseq2Sites) for more details.
 
 #### 3) Configure environment paths
 
