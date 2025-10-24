@@ -23,7 +23,7 @@ Path A — Train and run with the Zenodo bundle
 Use this if you want to train/evaluate/predict with the same assets used in the paper.
 
 ### 1) Download the Zenodo bundle(s) and extract under `results/` (repo root)
-Download <https://zenodo.org/records/17400533>. This includes:
+Download <https://zenodo.org/records/17433514>. This includes:
 - Trained models
 - Protein embedddings
 - Sequence ID mapping 
@@ -81,7 +81,7 @@ Use this if you want to train or predict using with new sequences, or rebuild al
 
 Create or download `results/binding_sites/binding_sites_all.tsv`:
 
-- **Option A (recommended):** Download the precomputed binding sites from [Zenodo](https://zenodo.org/records/17400533)
+- **Option A (recommended):** Download the precomputed binding sites from [Zenodo](https://zenodo.org/records/17433514)
 - **Option B:** Initialize an empty cache file:
   ```bash
   mkdir -p results/binding_sites
