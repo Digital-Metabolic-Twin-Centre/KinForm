@@ -155,9 +155,6 @@ def _compute_esmc(sequences: List[str], seq_id_to_sequence: Dict[str, str]) -> T
 
 def _compute_all_emb(sequences: List[str], seq_id_to_sequence: Dict[str, str]) -> Tuple[Dict[str, bool], Dict[str, str]]:
     esmc_computed, esmc_reasons = _compute_esmc(sequences, seq_id_to_sequence)
-    print(esmc_computed)
-    print(esmc_reasons)
-    raise
     esm2_computed, esm2_reasons = _compute_esm2(sequences, seq_id_to_sequence)
     t5_computed, t5_reasons = _compute_t5(sequences, seq_id_to_sequence)
     return (esmc_computed, esmc_reasons, esm2_computed, esm2_reasons, t5_computed, t5_reasons)
