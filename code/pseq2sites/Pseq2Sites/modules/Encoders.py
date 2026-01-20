@@ -90,6 +90,12 @@ class Pseq2Sites(nn.Module):
         
         feats = deepcopy(prots)
 
+        # Ensure all inputs are on the same device as the model
+        device = next(self.parameters()).device
+        position_ids = position_ids.to(device)
+        token_type_ids = token_type_ids.to(device)
+        attention_mask = attention_mask.to(device)
+        
         position_embeddings = self.position_embeddings(position_ids)
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
         

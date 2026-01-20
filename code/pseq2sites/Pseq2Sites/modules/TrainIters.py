@@ -18,6 +18,10 @@ class Pseq2SitesTrainIter:
         # build model
         self.model = Pseq2Sites(self.config)
         
+        # Move model to appropriate device
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model.to(device)
+        
     def train(self, train_loader, validation_loader, save_path):
         self.model_save_path = save_path
         
@@ -89,6 +93,7 @@ class Pseq2SitesTrainIter:
         checkpoint = torch.load(best_path + "/Pseq2Sites.pth", map_location=device)
         state_dict = checkpoint["state_dict"]
         self.model.load_state_dict(state_dict)
+        self.model.to(device)  # Ensure model is on the correct device
         
         predictions = list()
         
