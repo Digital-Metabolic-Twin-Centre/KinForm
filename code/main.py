@@ -58,7 +58,7 @@ from utils.sequence_features import sequences_to_feature_blocks
 from utils.pca import make_design_matrices
 from model_training import train_model
 from pseq2sites.get_sites import get_sites
-from code.utils.compute_embs import embeddings_exist, _compute_all_emb
+from utils.compute_embs import embeddings_exist, _compute_all_emb
 
 # Global paths - relative to repository root
 # This script is in code/, so go up one level to get to repo root
@@ -79,7 +79,6 @@ def _get_or_create_seq_id(sequence, seq_id_to_sequence, sequence_to_seq_id):
     if sequence in sequence_to_seq_id:
         return sequence_to_seq_id[sequence], seq_id_to_sequence, sequence_to_seq_id, False
     else:
-        print(f"↪ New sequence encountered – assigning new ID.")
         new_id = f"Sequence {len(sequence_to_seq_id)+1}"
         i = 2
         while new_id in seq_id_to_sequence:
@@ -162,10 +161,16 @@ def load_kcat(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np
     
     with data_file.open() as fp:
         raw = json.load(fp)
-    
-    valid = [(r["sequence"], r["smiles"], float(r["value"]))
-            for r in raw if len(r["sequence"]) <= 1499 and float(r["value"]) > 0]
+    truncated = 0
+    valid = []
+    for r in raw:
+        if len(r["sequence"]) > 1499:
+            new_seq = r["sequence"][:749] + r["sequence"][-749:]
+            truncated += 1
+            r["sequence"] = new_seq
+        valid.append((r["sequence"], r["smiles"], float(r["value"])))
     seqs, smis, y = zip(*valid)
+    print(f"↪ Truncated {truncated} sequences longer than 1499 residues.")
     y = np.array([math.log(v, 10) for v in y], dtype=np.float32)
     emb_computed, reasons = compute_embeddings(list(seqs))
     if not all(emb_computed):
@@ -425,45 +430,64 @@ def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path, data_path:
     print(f"✓ Predictions saved to {csv_out} (values in original scale, not log10)")
 
 
-# ══════════════════════════ CLI parser ═════════════════════════════ #
-if __name__ == "__main__":
-    p = argparse.ArgumentParser(description="Single-pass training / inference for KinForm & UniKP.")
-    p.add_argument("--mode", required=True, choices=["train", "predict"],
-                help="'train' – fit model on all data; 'predict' – run inference with a saved model")
-    p.add_argument("--task", required=True, choices=["kcat", "KM"],
-                help="What to train/predict on (kcat or KM)")
-    p.add_argument("--model_config", required=True, choices=["KinForm-H", "KinForm-L", "UniKP"],
-                help="Which model configuration to use")
-    p.add_argument("--save_results", type=Path,
-                help="CSV path for predictions (required in predict mode)")
-    p.add_argument("--train_test_split", type=float, default=1.0,
-                help="Proportion of data to use for training (default: 1.0 = all data). "
-                     "If < 1.0, performs 5-fold KFold and GroupKFold cross-validation.")
-    p.add_argument("--data_path", type=Path,
-                help="Optional path to custom data JSON file. "
-                     "For kcat: JSON with 'sequence', 'smiles', 'value' (raw kcat, not log). "
-                     "For KM: JSON with 'Sequence', 'smiles', 'log10_KM'. "
-                     "If not provided, uses default datasets.")
+# # ══════════════════════════ CLI parser ═════════════════════════════ #
+# if __name__ == "__main__":
+#     p = argparse.ArgumentParser(description="Single-pass training / inference for KinForm & UniKP.")
+#     p.add_argument("--mode", required=True, choices=["train", "predict"],
+#                 help="'train' – fit model on all data; 'predict' – run inference with a saved model")
+#     p.add_argument("--task", required=True, choices=["kcat", "KM"],
+#                 help="What to train/predict on (kcat or KM)")
+#     p.add_argument("--model_config", required=True, choices=["KinForm-H", "KinForm-L", "UniKP"],
+#                 help="Which model configuration to use")
+#     p.add_argument("--save_results", type=Path,
+#                 help="CSV path for predictions (required in predict mode)")
+#     p.add_argument("--train_test_split", type=float, default=1.0,
+#                 help="Proportion of data to use for training (default: 1.0 = all data). "
+#                      "If < 1.0, performs 5-fold KFold and GroupKFold cross-validation.")
+#     p.add_argument("--data_path", type=Path,
+#                 help="Optional path to custom data JSON file. "
+#                      "For kcat: JSON with 'sequence', 'smiles', 'value' (raw kcat, not log). "
+#                      "For KM: JSON with 'Sequence', 'smiles', 'log10_KM'. "
+#                      "If not provided, uses default datasets.")
 
-    args = p.parse_args()
-    results_dir = ROOT / "results"
-    os.makedirs(results_dir, exist_ok=True)
-    model_dir = results_dir / f"./trained_models/{args.task}_{args.model_config}"
+#     args = p.parse_args()
+#     results_dir = ROOT / "results"
+#     os.makedirs(results_dir, exist_ok=True)
+#     model_dir = results_dir / f"./trained_models/{args.task}_{args.model_config}"
     
-    if args.mode == "train":
-        if args.train_test_split <= 0.0 or args.train_test_split > 1.0:
-            p.error("--train_test_split must be in range (0.0, 1.0]")
-        train(args.task, args.model_config, model_dir, args.train_test_split, args.data_path)
-    else:  # predict
-        if args.save_results is None:
-            p.error("--save_results is required in predict mode")
-        predict(args.task, args.model_config, model_dir, args.save_results, args.data_path)
+#     if args.mode == "train":
+#         if args.train_test_split <= 0.0 or args.train_test_split > 1.0:
+#             p.error("--train_test_split must be in range (0.0, 1.0]")
+#         train(args.task, args.model_config, model_dir, args.train_test_split, args.data_path)
+#     else:  # predict
+#         if args.save_results is None:
+#             p.error("--save_results is required in predict mode")
+#         predict(args.task, args.model_config, model_dir, args.save_results, args.data_path)
 
-"""
-TODO:
-- If protein embeddings OR binding-site preds missing, compute on the fly (with caching)
-    - for each missing protein (or in batch):
-        - compute embedding from each PLLM (if missing) --subprocess
-        - compute binding-site predictions (if missing) --subprocess
-        - Cache mean vector and weighted mean vector
-"""
+
+if __name__ == "__main__":
+    fastas_path = "/home/saleh/DLKcat/BayesianApproach/Results/kcat_comparison/all_sequences.fasta"
+
+    sequences = []
+    with open(fastas_path, 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            if not line.startswith('>'):
+                sequences.append(line.strip())
+    print(f"Computing embeddings for all sequences: {len(sequences)}")
+    truncated = 0
+    valid_seqs = []
+    for seq in sequences:
+        if len(seq) > 1499:
+            new_seq = seq[:749] + seq[-749:]
+            seq = new_seq
+            truncated += 1
+        valid_seqs.append(seq)
+    print(f"↪ Truncated {truncated} sequences longer than 1499 residues.")
+    sequences = valid_seqs
+    batch_size = 5
+    for i in range(0, len(sequences), batch_size):
+        print(f"Processing sequences {i+1} to {min(i+batch_size, len(sequences))}...")
+        batch_seqs = sequences[i:i+batch_size]
+        print(f"Processing batch {i//batch_size + 1} / {(len(sequences) + batch_size - 1)//batch_size}...")
+        compute_embeddings(batch_seqs)
