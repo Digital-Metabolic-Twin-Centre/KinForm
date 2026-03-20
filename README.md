@@ -3,7 +3,7 @@ KinForm – Enzyme Kinetics Prediction
 Code for the implementation and experiments of KinForm models for predicting enzyme–substrate kinetic parameters (kcat and KM) from protein sequence and SMILES.
 
 If you just want to get predictions for your own data using our trained models, you can use the hosted web app (no setup required):
-https://kineticxpredictor.humanmetabolism.org/
+https://predictor.openkinetics.org/
 
 For details on the models and experiments, see the preprint:
 https://arxiv.org/abs/2507.14639
