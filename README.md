@@ -8,9 +8,9 @@ https://predictor.openkinetics.org/
 For details on the models and experiments, see the preprint:
 https://arxiv.org/abs/2507.14639
 
-
 Setup
 -----
+Python 3.12 is recommended
 ```bash
 git clone https://github.com/Digital-Metabolic-Twin-Centre/KinForm.git
 cd KinForm

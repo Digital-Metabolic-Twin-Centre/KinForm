@@ -125,7 +125,13 @@ def compute_embeddings(sequences: List[str]) -> Tuple[Dict[str, bool], Dict[str,
     )
     if (all(esm2_exists) and all(esmc_exists) and all(t5_exists)):
         print("✓ All embeddings already exist. No computation needed.")
-        return [True] * len(sequences)
+        return [True] * len(sequences), reasons
+    else:
+        # print how many are missing
+        print(f"Missing {sum(not x for x in esm2_exists)} ESM-2 embeddings.")
+        print(f"Missing {sum(not x for x in esmc_exists)} ESM-C embeddings.")
+        print(f"Missing {sum(not x for x in t5_exists)} Prot-T5 embeddings.")
+        raise RuntimeError("Some embeddings are missing. Please rerun the script.")
     print(f"Missing {sum(not x for x in esm2_exists)} ESM-2 embeddings.")
     print(f"Missing {sum(not x for x in esmc_exists)} ESM-C embeddings.")
     print(f"Missing {sum(not x for x in t5_exists)} Prot-T5 embeddings.")
@@ -154,8 +160,8 @@ def compute_embeddings(sequences: List[str]) -> Tuple[Dict[str, bool], Dict[str,
             reasons[seq_id].append(t5_reasons[seq_id])
     return computed_dict, reasons
 
-def load_kcat(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return sequences, smiles and log10(kcat) as numpy arrays."""
+def load_kcat(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Return sequences (original), sequences (truncated for model), smiles and log10(kcat) as numpy arrays."""
     data_file = data_path if data_path else DATA_KCAT
     print(f"Loading kcat data from {data_file}...")
     
@@ -164,45 +170,46 @@ def load_kcat(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np
     truncated = 0
     valid = []
     for r in raw:
-        if len(r["sequence"]) > 1499:
-            new_seq = r["sequence"][:749] + r["sequence"][-749:]
+        original_seq = r["sequence"]
+        model_seq = original_seq
+        if len(original_seq) > 1499:
+            model_seq = original_seq[:749] + original_seq[-749:]
             truncated += 1
-            r["sequence"] = new_seq
-        valid.append((r["sequence"], r["smiles"], float(r["value"])))
-    seqs, smis, y = zip(*valid)
+        valid.append((original_seq, model_seq, r["smiles"], float(r["value"])))
+    orig_seqs, model_seqs, smis, y = zip(*valid)
     print(f"↪ Truncated {truncated} sequences longer than 1499 residues.")
     y = np.array([math.log(v, 10) for v in y], dtype=np.float32)
-    emb_computed, reasons = compute_embeddings(list(seqs))
+    emb_computed, reasons = compute_embeddings(list(model_seqs))
     if not all(emb_computed):
-        failed_seqs = [seqs[i] for i, v in enumerate(emb_computed) if not v]
+        failed_seqs = [model_seqs[i] for i, v in enumerate(emb_computed) if not v]
         print(f"Warning: Embedding computation failed for {len(failed_seqs)} sequences.")
         for seq_id, reason_list in reasons.items():
             if any(reason_list):
                 print(f"  - Sequence ID {seq_id}: {'; '.join([r for r in reason_list if r])}")
-    return np.asarray(seqs), np.asarray(smis), y
+    return np.asarray(orig_seqs), np.asarray(model_seqs), np.asarray(smis), y
 
-def load_km(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return sequences, smiles and log10(KM) as numpy arrays."""
+def load_km(data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Return sequences (original), sequences (for model - same as original for KM), smiles and log10(KM) as numpy arrays."""
     data_file = data_path if data_path else DATA_KM
     print(f"Loading KM data from {data_file}...")
     
     with data_file.open() as fp:
         raw = json.load(fp)
     
-    valid = [(r["Sequence"], r["smiles"], float(r["log10_KM"]))
+    valid = [(r["Sequence"], r["Sequence"], r["smiles"], float(r["log10_KM"]))
             for r in raw if len(r["Sequence"]) <= 1499 and "." not in r["smiles"]]
-    seqs, smis, y = zip(*valid)
-    emb_computed, reasons = compute_embeddings(list(seqs))
+    orig_seqs, model_seqs, smis, y = zip(*valid)
+    emb_computed, reasons = compute_embeddings(list(model_seqs))
     if not all(emb_computed):
-        failed_seqs = [seqs[i] for i, v in enumerate(emb_computed) if not v]
+        failed_seqs = [model_seqs[i] for i, v in enumerate(emb_computed) if not v]
         print(f"Warning: Embedding computation failed for {len(failed_seqs)} sequences.")
         for seq_id, reason_list in reasons.items():
             if any(reason_list):
                 print(f"  - Sequence ID {seq_id}: {'; '.join([r for r in reason_list if r])}")
-    return np.asarray(seqs), np.asarray(smis), np.asarray(y, dtype=np.float32)
+    return np.asarray(orig_seqs), np.asarray(model_seqs), np.asarray(smis), np.asarray(y, dtype=np.float32)
 
 
-def get_dataset(task: str, data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_dataset(task: str, data_path: Path | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Load dataset for the specified task.
     
@@ -215,8 +222,10 @@ def get_dataset(task: str, data_path: Path | None = None) -> Tuple[np.ndarray, n
     
     Returns
     -------
-    Tuple[np.ndarray, np.ndarray, np.ndarray]
-        (sequences, smiles, target_values)
+    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+        (original_sequences, model_sequences, smiles, target_values)
+        original_sequences: sequences as they appear in input (before any truncation)
+        model_sequences: sequences used for model (truncated if needed)
     """
     if task.lower() == "kcat":
         return load_kcat(data_path)
@@ -273,8 +282,8 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
     model_dir.mkdir(parents=True, exist_ok=True)
     cfg = CONFIG_MAP[cfg_name]
 
-    seqs, smis, y = get_dataset(task, data_path)
-    print(f"✓ Loaded {len(seqs)} {task} samples with sequences and SMILES.")
+    orig_seqs, model_seqs, smis, y = get_dataset(task, data_path)
+    print(f"✓ Loaded {len(orig_seqs)} {task} samples with sequences and SMILES.")
     
     # If train_test_split < 1.0, perform cross-validation
     if train_test_split < 1.0:
@@ -282,15 +291,15 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
         print(f"Running cross-validation with {int(train_test_split*100)}% train split")
         print(f"{'='*70}\n")
         
-        # Get sequence groups for GroupKFold
+        # Get sequence groups for GroupKFold (use model_seqs for embeddings)
         seq_lookup = pd.read_pickle(SEQ_LOOKUP)
         seq_to_id = {v: k for k, v in seq_lookup.items()}
-        groups = [seq_to_id[s] for s in seqs]
+        groups = [seq_to_id[s] for s in model_seqs]
         # Binding-site predictions (load once)
         bs_df = pd.read_csv(BS_PRED_PATH, sep="\t")
-        # Build feature blocks once
+        # Build feature blocks once (use model_seqs)
         blocks_all, block_names = sequences_to_feature_blocks(
-            sequence_list=seqs,
+            sequence_list=model_seqs,
             binding_site_df=bs_df,
             cat_sites_df=None,
             ec_num_df=None,
@@ -313,9 +322,9 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
             print(f"{'-'*70}")
             
             if split_mode == "kfold":
-                cv = KFold(n_splits=5, shuffle=True, random_state=42).split(seqs)
+                cv = KFold(n_splits=5, shuffle=True, random_state=42).split(model_seqs)
             else:
-                cv = GroupKFold(n_splits=5).split(seqs, groups=groups)
+                cv = GroupKFold(n_splits=5).split(model_seqs, groups=groups)
             
             fold_results: List[Dict] = []
             
@@ -366,8 +375,8 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
         print(f"{'='*70}\n")
         
     else:
-        # Original behavior: train on all data
-        X, fitted = build_design_matrix(seqs, smis, cfg, task=task)
+        # Original behavior: train on all data (use model_seqs for training)
+        X, fitted = build_design_matrix(model_seqs, smis, cfg, task=task)
         print(f"✓ Built design matrix with shape {X.shape}.")
 
         if cfg_name == "KinForm-L" and task == "kcat":
@@ -376,8 +385,8 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
                 oversample_kcat_balanced_indices,
             )
             print("↪ Performing similarity-based oversampling...")
-            indices = np.arange(len(seqs))
-            indices = oversample_similarity_balanced_indices(indices, seqs)
+            indices = np.arange(len(model_seqs))
+            indices = oversample_similarity_balanced_indices(indices, model_seqs)
             print(f"  ↪ After similarity oversampling: {len(indices)} samples")
             indices = oversample_kcat_balanced_indices(indices, y)
             print(f"  ↪ After kcat oversampling: {len(indices)} samples")
@@ -399,7 +408,7 @@ def train(task: str, cfg_name: str, model_dir: Path, train_test_split: float = 1
 def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path, data_path: Path | None = None) -> None:
     model = joblib.load(model_dir / "model.joblib")
 
-    seqs, smis, y_true_log = get_dataset(task, data_path)
+    orig_seqs, model_seqs, smis, y_true_log = get_dataset(task, data_path)
     cfg = CONFIG_MAP[cfg_name]
 
     # Load transformers if present and PCA is used by the config
@@ -408,8 +417,35 @@ def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path, data_path:
         transformers = joblib.load(model_dir / "transformers.joblib")
         print(f"✓ Loaded transformers from {model_dir / 'transformers.joblib'}")
 
-    X, _ = build_design_matrix(seqs, smis, cfg, task=task, transformers=transformers)
-    y_pred_log = model.predict(X)
+    n_samples = len(model_seqs)
+    batch_size = 500
+    
+    # Process in batches if >1000 rows, otherwise process all at once
+    if n_samples > 1000:
+        print(f"↪ Processing {n_samples} samples in batches of {batch_size}...")
+        y_pred_log_list = []
+        
+        for start_idx in range(0, n_samples, batch_size):
+            end_idx = min(start_idx + batch_size, n_samples)
+            batch_num = start_idx // batch_size + 1
+            total_batches = (n_samples + batch_size - 1) // batch_size
+            print(f"  Batch {batch_num}/{total_batches} (samples {start_idx+1}-{end_idx})...")
+            
+            # Get batch data (use model_seqs for building features)
+            model_seqs_batch = model_seqs[start_idx:end_idx]
+            smis_batch = smis[start_idx:end_idx]
+            
+            # Build design matrix for batch
+            X_batch, _ = build_design_matrix(model_seqs_batch, smis_batch, cfg, task=task, transformers=transformers)
+            
+            # Predict for batch
+            y_pred_batch = model.predict(X_batch)
+            y_pred_log_list.append(y_pred_batch)
+        
+        y_pred_log = np.concatenate(y_pred_log_list)
+    else:
+        X, _ = build_design_matrix(model_seqs, smis, cfg, task=task, transformers=transformers)
+        y_pred_log = model.predict(X)
     
     # Convert from log10 scale back to original scale
     if task.lower() == "kcat":
@@ -419,8 +455,9 @@ def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path, data_path:
         y_true = 10 ** y_true_log
         y_pred = 10 ** y_pred_log
 
+    # IMPORTANT: Use original sequences in output, not truncated model_seqs
     out = pd.DataFrame({
-        "sequence": seqs,
+        "sequence": orig_seqs,
         "smiles":   smis,
         "y_true":   y_true,
         "y_pred":   y_pred,
@@ -428,66 +465,64 @@ def predict(task: str, cfg_name: str, model_dir: Path, csv_out: Path, data_path:
     csv_out.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(csv_out, index=False)
     print(f"✓ Predictions saved to {csv_out} (values in original scale, not log10)")
+    print(f"✓ Output contains original sequences (before any truncation for model)")
 
 
-# # ══════════════════════════ CLI parser ═════════════════════════════ #
-# if __name__ == "__main__":
-#     p = argparse.ArgumentParser(description="Single-pass training / inference for KinForm & UniKP.")
-#     p.add_argument("--mode", required=True, choices=["train", "predict"],
-#                 help="'train' – fit model on all data; 'predict' – run inference with a saved model")
-#     p.add_argument("--task", required=True, choices=["kcat", "KM"],
-#                 help="What to train/predict on (kcat or KM)")
-#     p.add_argument("--model_config", required=True, choices=["KinForm-H", "KinForm-L", "UniKP"],
-#                 help="Which model configuration to use")
-#     p.add_argument("--save_results", type=Path,
-#                 help="CSV path for predictions (required in predict mode)")
-#     p.add_argument("--train_test_split", type=float, default=1.0,
-#                 help="Proportion of data to use for training (default: 1.0 = all data). "
-#                      "If < 1.0, performs 5-fold KFold and GroupKFold cross-validation.")
-#     p.add_argument("--data_path", type=Path,
-#                 help="Optional path to custom data JSON file. "
-#                      "For kcat: JSON with 'sequence', 'smiles', 'value' (raw kcat, not log). "
-#                      "For KM: JSON with 'Sequence', 'smiles', 'log10_KM'. "
-#                      "If not provided, uses default datasets.")
-
-#     args = p.parse_args()
-#     results_dir = ROOT / "results"
-#     os.makedirs(results_dir, exist_ok=True)
-#     model_dir = results_dir / f"./trained_models/{args.task}_{args.model_config}"
-    
-#     if args.mode == "train":
-#         if args.train_test_split <= 0.0 or args.train_test_split > 1.0:
-#             p.error("--train_test_split must be in range (0.0, 1.0]")
-#         train(args.task, args.model_config, model_dir, args.train_test_split, args.data_path)
-#     else:  # predict
-#         if args.save_results is None:
-#             p.error("--save_results is required in predict mode")
-#         predict(args.task, args.model_config, model_dir, args.save_results, args.data_path)
-
-
+# ══════════════════════════ CLI parser ═════════════════════════════ #
 if __name__ == "__main__":
-    fastas_path = "/home/saleh/DLKcat/BayesianApproach/Results/kcat_comparison/all_sequences.fasta"
+    p = argparse.ArgumentParser(description="Single-pass training / inference for KinForm & UniKP.")
+    p.add_argument("--mode", required=True, choices=["train", "predict"],
+                help="'train' – fit model on all data; 'predict' – run inference with a saved model")
+    p.add_argument("--task", required=True, choices=["kcat", "KM"],
+                help="What to train/predict on (kcat or KM)")
+    p.add_argument("--model_config", required=True, choices=["KinForm-H", "KinForm-L", "UniKP"],
+                help="Which model configuration to use")
+    p.add_argument("--save_results", type=Path,
+                help="CSV path for predictions (required in predict mode)")
+    p.add_argument("--train_test_split", type=float, default=1.0,
+                help="Proportion of data to use for training (default: 1.0 = all data). "
+                     "If < 1.0, performs 5-fold KFold and GroupKFold cross-validation.")
+    p.add_argument("--data_path", type=Path,
+                help="Optional path to custom data JSON file. "
+                     "For kcat: JSON with 'sequence', 'smiles', 'value' (raw kcat, not log). "
+                     "For KM: JSON with 'Sequence', 'smiles', 'log10_KM'. "
+                     "If not provided, uses default datasets.")
 
-    sequences = []
-    with open(fastas_path, 'r') as f:
-        lines = f.readlines()
-        for line in lines:
-            if not line.startswith('>'):
-                sequences.append(line.strip())
-    print(f"Computing embeddings for all sequences: {len(sequences)}")
-    truncated = 0
-    valid_seqs = []
-    for seq in sequences:
-        if len(seq) > 1499:
-            new_seq = seq[:749] + seq[-749:]
-            seq = new_seq
-            truncated += 1
-        valid_seqs.append(seq)
-    print(f"↪ Truncated {truncated} sequences longer than 1499 residues.")
-    sequences = valid_seqs
-    batch_size = 5
-    for i in range(0, len(sequences), batch_size):
-        print(f"Processing sequences {i+1} to {min(i+batch_size, len(sequences))}...")
-        batch_seqs = sequences[i:i+batch_size]
-        print(f"Processing batch {i//batch_size + 1} / {(len(sequences) + batch_size - 1)//batch_size}...")
-        compute_embeddings(batch_seqs)
+    args = p.parse_args()
+    results_dir = ROOT / "results"
+    os.makedirs(results_dir, exist_ok=True)
+    model_dir = results_dir / f"./trained_models/{args.task}_{args.model_config}"
+    
+    if args.mode == "train":
+        if args.train_test_split <= 0.0 or args.train_test_split > 1.0:
+            p.error("--train_test_split must be in range (0.0, 1.0]")
+        train(args.task, args.model_config, model_dir, args.train_test_split, args.data_path)
+    else:  # predict
+        if args.save_results is None:
+            p.error("--save_results is required in predict mode")
+        predict(args.task, args.model_config, model_dir, args.save_results, args.data_path)
+
+
+# if __name__ == "__main__":
+#     fastas_path = "/home/saleh/DLKcat/BayesianApproach/Results/kcat_comparison/all_sequences.fasta"
+
+#     sequences = []
+#     with open(fastas_path, 'r') as f:
+#         lines = f.readlines()
+#         for line in lines:
+#             if not line.startswith('>'):
+#                 sequences.append(line.strip())
+#     print(f"Computing embeddings for all sequences: {len(sequences)}")
+#     truncated = 0
+#     valid_seqs = []
+#     for seq in sequences:
+#         if len(seq) > 1499:
+#             new_seq = seq[:749] + seq[-749:]
+#             seq = new_seq
+#             truncated += 1
+#         valid_seqs.append(seq)
+#     print(f"↪ Truncated {truncated} sequences longer than 1499 residues.")
+#     sequences = valid_seqs
+
+#     emb_computed, reasons = compute_embeddings(sequences)
+#     raise
