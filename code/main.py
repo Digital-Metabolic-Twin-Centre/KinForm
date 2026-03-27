@@ -126,12 +126,7 @@ def compute_embeddings(sequences: List[str]) -> Tuple[Dict[str, bool], Dict[str,
     if (all(esm2_exists) and all(esmc_exists) and all(t5_exists)):
         print("✓ All embeddings already exist. No computation needed.")
         return [True] * len(sequences), reasons
-    else:
-        # print how many are missing
-        print(f"Missing {sum(not x for x in esm2_exists)} ESM-2 embeddings.")
-        print(f"Missing {sum(not x for x in esmc_exists)} ESM-C embeddings.")
-        print(f"Missing {sum(not x for x in t5_exists)} Prot-T5 embeddings.")
-        raise RuntimeError("Some embeddings are missing. Please rerun the script.")
+
     print(f"Missing {sum(not x for x in esm2_exists)} ESM-2 embeddings.")
     print(f"Missing {sum(not x for x in esmc_exists)} ESM-C embeddings.")
     print(f"Missing {sum(not x for x in t5_exists)} Prot-T5 embeddings.")
