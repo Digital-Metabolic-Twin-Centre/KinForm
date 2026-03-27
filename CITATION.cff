@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+message: "If you use KinForm, please cite the software and the associated preprint."
+title: "KinForm: Kinetics-Informed Feature Optimised Representation Models for Enzyme kcat and KM Prediction"
+version: "0.1.0"
+type: software
+license: MIT
+date-released: 2026-03-27
+repository-code: "https://github.com/Digital-Metabolic-Twin-Centre/KinForm"
+url: "https://github.com/Digital-Metabolic-Twin-Centre/KinForm"
+abstract: >-
+  KinForm is a research software repository for predicting enzyme kinetic
+  parameters from protein sequence and substrate SMILES using protein language
+  model embeddings, binding-site-aware pooling, dimensionality reduction, and
+  tree-based machine learning models.
+keywords:
+  - enzyme kinetics
+  - kcat
+  - KM
+  - protein language models
+  - bioinformatics
+  - cheminformatics
+authors:
+  - family-names: Alwer
+    given-names: Saleh
+    affiliation: "Digital Metabolic Twin Centre, University of Galway; School of Medicine, University of Galway"
+    email: "saleh.662000@gmail.com"
+  - family-names: Fleming
+    given-names: Ronan M. T.
+    affiliation: "Digital Metabolic Twin Centre, University of Galway; School of Medicine, University of Galway"
+    email: "ronan.mt.fleming@gmail.com"
+preferred-citation:
+  type: article
+  title: "KinForm: Kinetics-Informed Feature Optimised Representation Models for Enzyme kcat and KM Prediction"
+  authors:
+    - family-names: Alwer
+      given-names: Saleh
+    - family-names: Fleming
+      given-names: Ronan M. T.
+  journal: "arXiv"
+  year: 2025
+  article-number: "2507.14639"
+  url: "https://arxiv.org/abs/2507.14639"

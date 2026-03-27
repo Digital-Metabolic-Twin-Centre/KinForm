@@ -17,6 +17,15 @@ cd KinForm
 pip install -r requirements.txt
 ```
 
+License and Citation
+--------------------
+KinForm is distributed under the MIT License. See `LICENSE` for the full text.
+
+If you use this repository in your work, please cite it using the metadata in
+`CITATION.cff`. Machine-readable software metadata is also provided in
+`codemeta.json`, and `.zenodo.json` is included so GitHub releases can be
+archived cleanly in Zenodo once repository-level Zenodo integration is enabled.
+
 
 Path A — Train and run with the Zenodo bundle
 ----------------------------------------------------------
@@ -190,5 +199,4 @@ We also acknowledge the following projects that helped us understand the task of
 - **[DLKcat](https://github.com/SysBioChalmers/DLKcat)**
 - **[TurNup](https://github.com/AlexanderKroll/kcat_prediction)**
 - **[EITLEM-Kinetics](https://github.com/XvesS/EITLEM-Kinetics)**
-
 

@@ -1,0 +1,27 @@
+{
+  "title": "KinForm: Kinetics-Informed Feature Optimised Representation Models for Enzyme kcat and KM Prediction",
+  "description": "<p>KinForm is a research software repository for predicting enzyme kinetic parameters from protein sequence and substrate SMILES using protein language model embeddings, binding-site-aware pooling, dimensionality reduction, and tree-based machine learning models.</p>",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "MIT",
+  "version": "v0.1.0",
+  "publication_date": "2026-03-27",
+  "creators": [
+    {
+      "name": "Alwer, Saleh",
+      "affiliation": "Digital Metabolic Twin Centre, University of Galway; School of Medicine, University of Galway"
+    },
+    {
+      "name": "Fleming, Ronan M. T.",
+      "affiliation": "Digital Metabolic Twin Centre, University of Galway; School of Medicine, University of Galway"
+    }
+  ],
+  "keywords": [
+    "enzyme kinetics",
+    "kcat",
+    "KM",
+    "protein language models",
+    "bioinformatics",
+    "cheminformatics"
+  ]
+}

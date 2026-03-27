@@ -1,0 +1,80 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "name": "KinForm",
+  "description": "Research software for predicting enzyme kinetic parameters (kcat and KM) from protein sequence and substrate SMILES using protein language model embeddings, binding-site-aware pooling, dimensionality reduction, and tree-based machine learning models.",
+  "applicationCategory": "Bioinformatics",
+  "codeRepository": "https://github.com/Digital-Metabolic-Twin-Centre/KinForm",
+  "issueTracker": "https://github.com/Digital-Metabolic-Twin-Centre/KinForm/issues",
+  "license": "https://spdx.org/licenses/MIT.html",
+  "version": "0.1.0",
+  "datePublished": "2026-03-27",
+  "dateModified": "2026-03-27",
+  "developmentStatus": "https://www.repostatus.org/#active",
+  "keywords": [
+    "enzyme kinetics",
+    "kcat",
+    "KM",
+    "protein language models",
+    "bioinformatics",
+    "cheminformatics"
+  ],
+  "programmingLanguage": {
+    "@type": "ComputerLanguage",
+    "name": "Python"
+  },
+  "runtimePlatform": "Python 3",
+  "operatingSystem": [
+    "Linux",
+    "macOS"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Saleh",
+      "familyName": "Alwer",
+      "email": "mailto:saleh.662000@gmail.com",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Digital Metabolic Twin Centre, University of Galway"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Ronan M. T.",
+      "familyName": "Fleming",
+      "email": "mailto:ronan.mt.fleming@gmail.com",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Digital Metabolic Twin Centre, University of Galway"
+      }
+    }
+  ],
+  "maintainer": {
+    "@type": "Person",
+    "givenName": "Saleh",
+    "familyName": "Alwer",
+    "email": "mailto:saleh.662000@gmail.com"
+  },
+  "readme": "https://github.com/Digital-Metabolic-Twin-Centre/KinForm#readme",
+  "referencePublication": {
+    "@type": "ScholarlyArticle",
+    "name": "KinForm: Kinetics-Informed Feature Optimised Representation Models for Enzyme kcat and KM Prediction",
+    "url": "https://arxiv.org/abs/2507.14639"
+  },
+  "softwareRequirements": [
+    "joblib==1.4.2",
+    "matplotlib==3.10.7",
+    "numpy>=2.0,<2.4",
+    "optuna==4.5.0",
+    "pandas==2.3.3",
+    "rdkit==2024.3.5",
+    "scikit_learn==1.7.2",
+    "scikit_mol==0.6.1",
+    "scipy>=1.13,<1.17",
+    "seaborn==0.13.2",
+    "torch==2.4.0",
+    "tqdm==4.66.4",
+    "transformers==4.57.1"
+  ]
+}
